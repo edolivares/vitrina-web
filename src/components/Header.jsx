@@ -1,6 +1,7 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { Home, MessageSquare, User, LogOut } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export function Header({ showLogo = true }) {
   const { user, logout } = useUser();
@@ -63,18 +64,12 @@ export function Header({ showLogo = true }) {
       <div className="flex items-center gap-4">
         {user ? (
           <div className="flex items-center gap-3">
-            {}
-            <div className="hidden md:flex flex-col text-right">
-              <span className="text-xs font-semibold text-slate-200">{user.name}</span>
-              <span className="text-[10px] text-slate-500">{user.email}</span>
-            </div>
-            {}
-            <img
-              src={user.avatarUrl}
-              alt={user.name}
-              className="w-8 h-8 rounded-full border border-slate-700 object-cover"
-            />
-            {}
+            <Avatar className="w-8 h-8 border border-slate-700">
+              <AvatarImage src={user.avatarUrl} alt={user.name} />
+              <AvatarFallback className="bg-slate-800 text-[10px] text-slate-200 font-semibold">
+                {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
             <button
               onClick={handleLogout}
               className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"

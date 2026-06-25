@@ -58,7 +58,7 @@ export function Register() {
         <title>Registrarse | Vitrina</title>
         <meta name="description" content="Regístrate en Vitrina para comenzar a publicar tus productos y comunicarte directamente con compradores locales." />
       </Helmet>
-      <Card className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-8 backdrop-blur-md shadow-xl flex flex-col gap-6">
+      <Card className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl flex flex-col gap-6">
 
         {}
         <CardHeader className="text-center flex flex-col gap-1.5 p-0 border-none bg-transparent">

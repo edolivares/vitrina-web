@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { UserProvider } from '@/context/UserContext';
+import { Toaster } from 'sileo';
 import { Header } from '@/components/Header';
-import { Sidebar } from '@/components/Sidebar';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 import { Home } from '@/views/Home';
@@ -13,14 +13,11 @@ import { Publish } from '@/views/Publish';
 import { Detail } from '@/views/Detail';
 import { Messages } from '@/views/Messages';
 
-function LayoutWithSidebar() {
+function MainLayout() {
   return (
-    <div className="flex-1 flex flex-col lg:flex-row w-full items-start">
-      <Sidebar />
-      <main className="flex-1 flex flex-col min-w-0 w-full">
-        <Outlet />
-      </main>
-    </div>
+    <main className="flex-1 flex flex-col min-w-0 w-full">
+      <Outlet />
+    </main>
   );
 }
 
@@ -37,13 +34,14 @@ function App() {
     <HelmetProvider>
       <UserProvider>
         <Router>
-          <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+          <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+            <Toaster position="bottom-right" />
 
             <Header />
 
             <Routes>
 
-              <Route element={<LayoutWithSidebar />}>
+              <Route element={<MainLayout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/publicacion/:id" element={<Detail />} />
 

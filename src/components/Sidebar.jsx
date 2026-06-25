@@ -103,7 +103,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-full lg:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-800/80 bg-slate-900/40 p-6 flex flex-col gap-6 select-none lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
+    <aside className="w-full lg:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-900 p-6 flex flex-col gap-6 select-none lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
 
       {/* Title */}
       <div className="flex flex-col gap-1">

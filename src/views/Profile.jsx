@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@/context/UserContext';
 import { mockGetPostsBySeller, mockUpdatePostStatus, mockGetPostById } from '@/api/posts';
-import { Eye, Edit, Trash2, CheckCircle, Pause, Play, AlertCircle, Heart, FolderHeart, FileText } from 'lucide-react';
+import { Eye, Edit, Trash2, AlertCircle, Heart, FolderHeart, FileText, MessageSquare, TrendingUp, Archive, Calendar, Star, Upload } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Link, useNavigate } from 'react-router-dom';
+import { sileo } from 'sileo';
 import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { STORAGE_KEYS } from '@/config/constants';
@@ -24,7 +27,7 @@ if (!localStorage.getItem(STORAGE_KEYS.DRAFTS)) {
 }
 
 export function Profile() {
-  const { user, favorites, toggleFavorite } = useUser();
+  const { user, favorites, toggleFavorite, updateUser } = useUser();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
 
@@ -33,6 +36,11 @@ export function Profile() {
   const [favPosts, setFavPosts] = useState([]);
 
   const [loading, setLoading] = useState(true);
+
+  // Estados para diálogo de avatar
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isDragActive, setIsDragActive] = useState(false);
 
   const loadProfileData = useCallback(async () => {
     if (!user) return;
@@ -73,9 +81,13 @@ export function Profile() {
     try {
       await mockUpdatePostStatus(postId, newStatus);
       loadProfileData();
+      sileo.success({
+        title: "Publicación actualizada",
+        description: newStatus === 'PUBLISHED' ? "La publicación ha sido activada de nuevo." : "La publicación ha sido archivada correctamente."
+      });
     } catch (error) {
       console.error(error);
-      alert('Error al actualizar el estado de la publicación');
+      sileo.error({ title: "Error", description: "No se pudo actualizar el estado de la publicación." });
     }
   };
 
@@ -83,6 +95,77 @@ export function Profile() {
     const updatedDrafts = drafts.filter(d => d.id !== draftId);
     localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(updatedDrafts));
     setDrafts(updatedDrafts);
+  };
+
+  const handleDeletePost = (postId) => {
+    const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar esta publicación?');
+    if (!confirmDelete) return;
+
+    try {
+      const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
+      const updatedPosts = posts.filter(p => p.id !== Number(postId));
+      localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(updatedPosts));
+      loadProfileData();
+      sileo.success({
+        title: "Publicación eliminada",
+        description: "El artículo ha sido removido de tu listado."
+      });
+    } catch (error) {
+      console.error('Error al eliminar la publicación:', error);
+      sileo.error({ title: "Error", description: "No se pudo eliminar la publicación." });
+    }
+  };
+
+  // Manejadores de Drag and Drop para el Avatar
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragActive(false);
+  };
+
+  const processFile = (file) => {
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      sileo.error({
+        title: "Archivo no soportado",
+        description: "Por favor, selecciona un archivo de imagen válido (PNG, JPG o WEBP)."
+      });
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const handleSaveAvatar = () => {
+    if (previewUrl) {
+      updateUser({ avatarUrl: previewUrl });
+      setIsAvatarDialogOpen(false);
+      setPreviewUrl(null);
+      sileo.success({
+        title: "¡Avatar actualizado!",
+        description: "Tu foto de perfil se ha guardado correctamente."
+      });
+    }
   };
 
   const formatPrice = (value) => {
@@ -93,60 +176,87 @@ export function Profile() {
     }).format(value);
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'PUBLISHED':
-        return <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">Publicada</span>;
-      case 'ARCHIVED':
-        return <span className="bg-slate-800 border border-slate-700 text-slate-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">Archivada</span>;
-      case 'SOLD':
-        return <span className="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">Vendida</span>;
-      default:
-        return null;
-    }
-  };
+
 
   if (!user) return null;
 
   return (
-    <div className="flex-1 w-full p-6 flex flex-col gap-8">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
       <Helmet>
         <title>Mi Perfil | Vitrina</title>
         <meta name="description" content="Gestiona tu cuenta, tus publicaciones activas, tus borradores y tus productos favoritos en Vitrina." />
       </Helmet>
 
-      {}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md flex flex-col md:flex-row items-center gap-6">
-        <img
-          src={user.avatarUrl}
-          alt={user.name}
-          className="w-20 h-20 rounded-full object-cover border-2 border-indigo-500/30 shadow-lg shadow-indigo-500/5"
-        />
-        <div className="flex-1 text-center md:text-left flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-slate-100 font-sans tracking-tight">{user.name}</h1>
-          <p className="text-xs text-slate-400">{user.email}</p>
-          <span className="text-[10px] text-slate-600 mt-1">Miembro desde: Junio 2026</span>
+      {/* User Info Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex flex-col md:flex-row items-center gap-6 flex-1 min-w-0">
+          <div className="relative shrink-0">
+            <Avatar className="w-20 h-20 border-2 border-indigo-500/30 shadow-lg shadow-indigo-500/5">
+              <AvatarImage src={user.avatarUrl} alt={user.name} />
+              <AvatarFallback className="text-xl bg-slate-800 text-slate-200 font-semibold">
+                {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              onClick={() => {
+                setPreviewUrl(null);
+                setIsAvatarDialogOpen(true);
+              }}
+              className="absolute bottom-0 right-0 p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full border border-slate-900 transition-all hover:scale-105 shadow-md flex items-center justify-center cursor-pointer"
+              title="Cambiar foto de perfil"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex-1 text-center md:text-left flex flex-col gap-1 min-w-0">
+            <h2 className="text-2xl font-bold text-slate-100 font-sans tracking-tight">{user.name}</h2>
+            <span className="text-sm font-medium text-slate-400">{user.email}</span>
+            
+            {/* Insignias/Badges de usuario */}
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950/40 border border-slate-800/80 rounded-full text-xs font-semibold text-slate-300">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <span>Registrado: 12 Mayo 2024</span>
+              </div>
+              <div className="flex items-center px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-full text-xs font-semibold">
+                <span>Usuario Verificado</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950/40 border border-slate-800/80 rounded-full text-xs font-semibold text-slate-300">
+                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
+                <span>4.9 (124 reseñas)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="shrink-0 w-full md:w-auto">
+          <button
+            onClick={() => sileo.info({ title: "Módulo en desarrollo", description: "Componente o elemento en desarrollo." })}
+            className="w-full md:w-auto px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-200 hover:text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 hover:border-slate-700 active:scale-98 cursor-pointer"
+          >
+            <Edit className="w-4 h-4" />
+            Editar Perfil
+          </button>
         </div>
       </div>
 
       {}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col gap-6">
-        <TabsList className="bg-transparent border-b border-slate-800/80 rounded-none w-full justify-start p-0 h-auto gap-2">
+        <TabsList className="bg-slate-900 border border-slate-800/80 p-1.5 rounded-2xl flex gap-2 w-full max-w-xl justify-start h-auto">
           <TabsTrigger
             value="posts"
-            className="pb-3 px-4 text-sm font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-500 data-[state=active]:text-indigo-400 bg-transparent hover:text-slate-200 transition-all duration-300"
+            className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
           >
             Mis Publicaciones ({userPosts.length})
           </TabsTrigger>
           <TabsTrigger
             value="drafts"
-            className="pb-3 px-4 text-sm font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-500 data-[state=active]:text-indigo-400 bg-transparent hover:text-slate-200 transition-all duration-300"
+            className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
           >
             Mis Borradores ({drafts.length})
           </TabsTrigger>
           <TabsTrigger
             value="favorites"
-            className="pb-3 px-4 text-sm font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-500 data-[state=active]:text-indigo-400 bg-transparent hover:text-slate-200 transition-all duration-300"
+            className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
           >
             Mis Favoritos ({favPosts.length})
           </TabsTrigger>
@@ -160,68 +270,111 @@ export function Profile() {
 
             {}
             <TabsContent value="posts" className="mt-0 outline-none">
-              <div className="flex flex-col gap-3">
-                {userPosts.length === 0 ? (
-                  <div className="py-16 text-center border border-dashed border-slate-800/80 rounded-2xl text-slate-500 flex flex-col items-center justify-center gap-2">
-                    <FileText className="w-8 h-8 text-slate-700" />
-                    <span className="text-sm font-medium">Aún no has creado publicaciones</span>
-                    <Link to="/publicar" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold mt-1">Crear mi primera publicación</Link>
-                  </div>
-                ) : (
-                  userPosts.map(post => (
-                    <div key={post.id} className="bg-slate-900/30 border border-slate-800/80 hover:border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all">
-                      <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <img src={post.images[0]} alt={post.title} className="w-14 h-14 rounded-lg object-cover bg-slate-950 flex-shrink-0" />
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <span className="text-sm font-bold text-slate-200 truncate">{post.title}</span>
-                          <div className="flex items-center gap-3 text-xs">
-                            <span className="font-semibold text-indigo-400">{formatPrice(post.price)}</span>
-                            {getStatusBadge(post.status)}
-                          </div>
+              {userPosts.length === 0 ? (
+                <div className="py-16 text-center border border-dashed border-slate-800 rounded-2xl text-slate-500 flex flex-col items-center justify-center gap-2">
+                  <FileText className="w-8 h-8 text-slate-700" />
+                  <span className="text-sm font-medium">Aún no has creado publicaciones</span>
+                  <Link to="/publicar" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold mt-1">Crear mi primera publicación</Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {userPosts.map(post => (
+                    <div key={post.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700/80 hover:-translate-y-1 transition-all duration-300 flex flex-col relative">
+                      {/* Area de Imagen */}
+                      <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
+                        <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
+                        
+                        {/* Estado Badge (Top Left) */}
+                        <span className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm tracking-wider uppercase border-none ${
+                          post.status === 'PUBLISHED'
+                            ? 'bg-indigo-600/90'
+                            : post.status === 'SOLD'
+                            ? 'bg-blue-600/90'
+                            : 'bg-slate-800/90 text-slate-300'
+                        }`}>
+                          {post.status === 'PUBLISHED' ? 'Publicada' : post.status === 'SOLD' ? 'Vendida' : 'Archivada'}
+                        </span>
+
+                        {/* Contador de vistas (Top Right) */}
+                        <div className="absolute top-3 right-3 bg-slate-950/60 border border-slate-800/80 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm flex items-center gap-1">
+                          <Eye className="w-3 h-3" />
+                          <span>{post.id * 153 + 45}</span>
                         </div>
                       </div>
-                      {}
-                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                        {post.status === 'PUBLISHED' ? (
-                          <button
-                            onClick={() => handleUpdateStatus(post.id, 'ARCHIVED')}
-                            className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                            title="Pausar / Archivar publicación"
-                          >
-                            <Pause className="w-4 h-4" />
-                          </button>
-                        ) : post.status === 'ARCHIVED' ? (
-                          <button
-                            onClick={() => handleUpdateStatus(post.id, 'PUBLISHED')}
-                            className="p-2 rounded-lg bg-slate-950 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                            title="Activar / Publicar"
-                          >
-                            <Play className="w-4 h-4" />
-                          </button>
-                        ) : null}
 
-                        {post.status !== 'SOLD' && (
-                          <button
-                            onClick={() => handleUpdateStatus(post.id, 'SOLD')}
-                            className="p-2 rounded-lg bg-slate-950 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-colors"
-                            title="Marcar como Vendido"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                        )}
+                      {/* Informacion */}
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div className="flex flex-col gap-1">
+                          <h3 className="text-sm font-bold text-slate-200 truncate">{post.title}</h3>
+                          <span className="text-sm font-semibold text-indigo-400">{formatPrice(post.price)}</span>
+                          <span className="text-[10px] text-slate-500">Actualizado: hace unos momentos</span>
+                        </div>
 
-                        <Link
-                          to={`/publicacion/${post.id}`}
-                          className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                          title="Ver detalle"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
+                        {/* Botones de accion */}
+                        <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between gap-1">
+                          {/* 1. Chats de esta publicacion */}
+                          <Link
+                            to="/mensajes"
+                            className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all duration-250"
+                            title="Ver mensajes"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </Link>
+
+                          {/* 2. Editar */}
+                          <button
+                            onClick={() => sileo.info({ title: "Módulo en desarrollo", description: "Componente o elemento en desarrollo." })}
+                            className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all duration-250"
+                            title="Editar publicación"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          {/* 3. Archivar / Activar */}
+                          {post.status === 'PUBLISHED' ? (
+                            <button
+                              onClick={() => handleUpdateStatus(post.id, 'ARCHIVED')}
+                              className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 transition-all duration-250"
+                              title="Archivar publicación"
+                            >
+                              <Archive className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleUpdateStatus(post.id, 'PUBLISHED')}
+                              className="p-2 rounded-lg bg-slate-950 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-250"
+                              title="Publicar de nuevo"
+                            >
+                              <Archive className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          {/* 4. Estadísticas */}
+                          <button
+                            onClick={() => sileo.info({
+                              title: `Métricas de "${post.title}"`,
+                              description: `• Visitas: ${post.id * 153 + 45} | • Favoritos: ${post.id * 7 + 3} | • Chats: ${post.id * 2 + 1}`
+                            })}
+                            className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all duration-250"
+                            title="Estadísticas"
+                          >
+                            <TrendingUp className="w-4 h-4" />
+                          </button>
+
+                          {/* 5. Eliminar */}
+                          <button
+                            onClick={() => handleDeletePost(post.id)}
+                            className="p-2 rounded-lg bg-slate-950 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-250"
+                            title="Eliminar publicación"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             {}
@@ -241,7 +394,7 @@ export function Profile() {
                     </div>
                   ) : (
                     drafts.map(draft => (
-                      <div key={draft.id} className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-4 flex items-center justify-between gap-4">
+                      <div key={draft.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4">
                         <div className="flex flex-col gap-1 min-w-0">
                           <span className="text-sm font-bold text-slate-200 truncate">{draft.title || 'Sin Título'}</span>
                           <div className="flex items-center gap-3 text-xs text-slate-500">
@@ -274,43 +427,147 @@ export function Profile() {
 
             {}
             <TabsContent value="favorites" className="mt-0 outline-none">
-              <div className="flex flex-col gap-3">
-                {favPosts.length === 0 ? (
-                  <div className="py-16 text-center border border-dashed border-slate-800/80 rounded-2xl text-slate-500 flex flex-col items-center justify-center gap-2">
-                    <FolderHeart className="w-8 h-8 text-slate-700" />
-                    <span className="text-sm font-medium">No tienes publicaciones guardadas como favoritas</span>
-                  </div>
-                ) : (
-                  favPosts.map(post => (
-                    <div key={post.id} className="bg-slate-900/30 border border-slate-800/80 hover:border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4 transition-all">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <img src={post.images[0]} alt={post.title} className="w-12 h-12 rounded-lg object-cover bg-slate-950 flex-shrink-0" />
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <Link to={`/publicacion/${post.id}`} className="text-sm font-bold text-slate-200 hover:text-indigo-400 transition-colors truncate">{post.title}</Link>
-                          <div className="flex items-center gap-3 text-xs text-slate-500">
-                            <span className="font-semibold text-indigo-400">{formatPrice(post.price)}</span>
-                            <span>Ubicación: {post.comuna}</span>
-                          </div>
+              {favPosts.length === 0 ? (
+                <div className="py-16 text-center border border-dashed border-slate-800 rounded-2xl text-slate-500 flex flex-col items-center justify-center gap-2">
+                  <FolderHeart className="w-8 h-8 text-slate-700" />
+                  <span className="text-sm font-medium">No tienes publicaciones guardadas como favoritas</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {favPosts.map(post => (
+                    <div key={post.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700/80 hover:-translate-y-1 transition-all duration-300 flex flex-col relative">
+                      {/* Area de Imagen */}
+                      <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
+                        <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
+                        
+                        {/* Estado Badge (Top Left) */}
+                        <span className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm tracking-wider uppercase border-none ${
+                          post.status === 'PUBLISHED'
+                            ? 'bg-indigo-600/90'
+                            : post.status === 'SOLD'
+                            ? 'bg-blue-600/90'
+                            : 'bg-slate-800/90 text-slate-300'
+                        }`}>
+                          {post.status === 'PUBLISHED' ? 'Publicada' : post.status === 'SOLD' ? 'Vendida' : 'Archivada'}
+                        </span>
+                      </div>
+
+                      {/* Informacion */}
+                      <div className="p-4 flex-1 flex flex-col justify-between">
+                        <div className="flex flex-col gap-1">
+                          <h3 className="text-sm font-bold text-slate-200 truncate">{post.title}</h3>
+                          <span className="text-sm font-semibold text-indigo-400">{formatPrice(post.price)}</span>
+                          <span className="text-[10px] text-slate-500">Ubicación: {post.comuna}</span>
+                        </div>
+
+                        {/* Botones de accion */}
+                        <div className="mt-4 pt-3 border-t border-slate-850 flex items-center justify-between gap-2">
+                          <Link
+                            to={`/publicacion/${post.id}`}
+                            className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Ver Artículo
+                          </Link>
+                          
+                          <button
+                            onClick={() => toggleFavorite(post.id)}
+                            className="p-2 rounded-lg bg-slate-950 text-rose-500 hover:bg-rose-500/10 transition-colors"
+                            title="Quitar de favoritos"
+                          >
+                            <Heart className="w-4 h-4 fill-current" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleFavorite(post.id)}
-                          className="p-2 rounded-lg bg-slate-950 text-rose-500 hover:bg-rose-500/10 transition-colors"
-                          title="Quitar de favoritos"
-                        >
-                          <Heart className="w-4 h-4 fill-current" />
-                        </button>
-                      </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
           </div>
         )}
       </Tabs>
+
+      {/* Diálogo de Cambio de Imagen */}
+      <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
+        <DialogContent className="max-w-md bg-slate-900 border border-slate-800 text-slate-200 p-6 rounded-2xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-100">Cambiar Foto de Perfil</DialogTitle>
+            <DialogDescription className="text-sm text-slate-400 mt-1">
+              Arrastra una nueva foto o haz clic en la zona para seleccionarla desde tu equipo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="my-6">
+            {/* Zona de Drop */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('avatar-input').click()}
+              className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all duration-200 ${
+                isDragActive
+                  ? 'border-indigo-500 bg-indigo-500/5'
+                  : 'border-slate-800 hover:border-indigo-500/50 bg-slate-950/40 hover:bg-slate-950/60'
+              }`}
+            >
+              <input
+                id="avatar-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+
+              {previewUrl ? (
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src={previewUrl}
+                    alt="Previsualización"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500/30 shadow-lg"
+                  />
+                  <span className="text-xs text-indigo-400 font-semibold">Previsualización del avatar</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-400">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-semibold text-slate-200">Arrastra tu imagen aquí</span>
+                    <span className="text-xs text-slate-500">O haz clic para buscar archivo</span>
+                  </div>
+                  <span className="text-[10px] text-slate-600">Soporta PNG, JPG o WEBP (máx. 5MB)</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => {
+                setIsAvatarDialogOpen(false);
+                setPreviewUrl(null);
+              }}
+              className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSaveAvatar}
+              disabled={!previewUrl}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all shadow-md ${
+                previewUrl
+                  ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20 active:scale-95 cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
+              }`}
+            >
+              Guardar Cambios
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

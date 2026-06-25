@@ -169,7 +169,7 @@ export function Detail() {
           <div className="h-px bg-slate-800/60" />
 
           {}
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
             {}
             <div className="flex items-center gap-3">
               <img

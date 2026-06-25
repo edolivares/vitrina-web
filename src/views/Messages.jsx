@@ -120,10 +120,10 @@ export function Messages() {
       </Helmet>
 
       {}
-      <div className={`w-full md:w-80 flex-shrink-0 bg-slate-900/30 border border-slate-800/80 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+      <div className={`w-full md:w-80 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
         activeChatId ? 'hidden md:flex' : 'flex'
       }`}>
-        <div className="p-4 border-b border-slate-800/80">
+        <div className="p-4 border-b border-slate-800">
           <h2 className="text-lg font-bold text-slate-200 flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-indigo-400" />
             Mensajes
@@ -146,8 +146,8 @@ export function Messages() {
                 <button
                   key={chat.id}
                   onClick={() => selectChat(chat.id)}
-                  className={`w-full p-4 border-b border-slate-900 flex items-center gap-3 text-left transition-colors ${
-                    isActive ? 'bg-indigo-500/10' : 'hover:bg-slate-900/30'
+                  className={`w-full p-4 border-b border-slate-800 flex items-center gap-3 text-left transition-all ${
+                    isActive ? 'bg-indigo-600/15 text-indigo-100 border-l-4 border-l-indigo-500 pl-3' : 'hover:bg-slate-800/40 pl-4'
                   }`}
                 >
                   <img src={chat.postImage} alt={chat.postTitle} className="w-12 h-12 rounded-lg object-cover bg-slate-950 flex-shrink-0" />
@@ -169,14 +169,14 @@ export function Messages() {
       </div>
 
       {}
-      <div className={`flex-1 bg-slate-900/30 border border-slate-800/80 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+      <div className={`flex-1 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
         activeChatId ? 'flex' : 'hidden md:flex'
       }`}>
 
         {activeChatId && activeChat ? (
           <>
             {}
-            <div className="p-4 border-b border-slate-800/80 flex items-center justify-between gap-4 bg-slate-900/40">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-900/40">
 
               {}
               <button
@@ -220,12 +220,12 @@ export function Messages() {
                         className={`rounded-2xl px-4 py-2.5 text-sm ${
                           isMe
                             ? 'bg-indigo-600 text-white rounded-tr-none'
-                            : 'bg-slate-900 text-slate-200 border border-slate-800/80 rounded-tl-none'
+                            : 'bg-slate-800 text-slate-100 border border-slate-700/50 rounded-tl-none'
                         }`}
                       >
                         {msg.content}
                       </div>
-                      <span className="text-[9px] text-slate-600 mt-1 pl-1 pr-1">
+                      <span className="text-[9px] text-slate-400 mt-1 pl-1 pr-1">
                         {new Date(msg.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>

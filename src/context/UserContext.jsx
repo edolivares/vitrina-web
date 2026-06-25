@@ -47,6 +47,10 @@ export function UserProvider({ children }) {
     localStorage.removeItem(STORAGE_KEYS.FAVORITES);
   };
 
+  const updateUser = (updatedData) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedData } : null));
+  };
+
   const toggleFavorite = (postId) => {
     if (!user) return;
 
@@ -65,7 +69,7 @@ export function UserProvider({ children }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, favorites, login, logout, register, toggleFavorite, isFavorite }}>
+    <UserContext.Provider value={{ user, favorites, login, logout, register, toggleFavorite, isFavorite, updateUser }}>
       {children}
     </UserContext.Provider>
   );
