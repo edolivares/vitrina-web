@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Grandientes vibrantes para la estética oscura premium -->
+    <linearGradient id="indigoToBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <linearGradient id="violetToIndigo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
+    </linearGradient>
+    
+    <!-- Filtros de brillo sutiles -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Contenedor del fondo oscuro redondeado -->
+  <rect width="512" height="512" rx="140" fill="#090d16" />
+
+  <!-- Efecto de brillo de fondo detrás de la vitrina -->
+  <circle cx="256" cy="256" r="160" fill="url(#glowGrad)" filter="url(#glow)" opacity="0.3" />
+
+  <!-- Estructura de la "Vitrina" en forma de V geométrica 3D -->
+  <g transform="translate(0, 5)">
+    <!-- Cara lateral izquierda de la V (color violeta-indigo) -->
+    <path d="M 160 160 L 230 140 L 230 320 L 160 340 Z" fill="url(#violetToIndigo)" opacity="0.9" />
+    
+    <!-- Cara lateral derecha de la V (color indigo-azul) -->
+    <path d="M 352 160 L 282 140 L 282 320 L 352 340 Z" fill="url(#indigoToBlue)" opacity="0.9" />
+
+    <!-- Cara frontal/central transparente que simula vidrio (Efecto Showcase) -->
+    <path d="M 230 140 L 282 140 L 256 380 Z" fill="#ffffff" opacity="0.15" />
+    
+    <!-- Reflejos superiores de vidrio brillante -->
+    <path d="M 160 160 L 230 140 L 282 140 L 352 160 L 256 185 Z" fill="#ffffff" opacity="0.1" />
+
+    <!-- Base / Vértice inferior con luz de acento -->
+    <path d="M 230 320 L 282 320 L 256 380 Z" fill="url(#indigoToBlue)" opacity="0.8" />
+    <circle cx="256" cy="380" r="14" fill="#3b82f6" filter="url(#glow)" />
+  </g>
+</svg>
