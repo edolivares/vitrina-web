@@ -169,7 +169,7 @@ export function Publish() {
       if (isEditingPost) {
         await mockUpdatePost(postId, postData, user);
       } else {
-        const activePosts = getStoredPosts().filter(post => post.sellerId === user.id && post.status === 'PUBLISHED');
+        const activePosts = getStoredPosts().filter(post => post.seller === user.id && post.status === 'PUBLISHED');
 
         if (activePosts.length >= FREE_ACCOUNT_LIMITS.MAX_ACTIVE_POSTS) {
           sileo.error({

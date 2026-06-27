@@ -7,6 +7,7 @@ import { mockCreateChat } from '@/api/messages';
 import { useUser } from '@/context/UserContext';
 import { Button } from '@/components/ui/button';
 import { sileo } from 'sileo';
+import { formatPrice } from '@/lib/format';
 
 export function Detail() {
   const { id } = useParams();
@@ -55,14 +56,6 @@ export function Detail() {
     );
   }
 
-  const formatPrice = (value) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
   const handleContactSeller = async () => {
     if (!user) {
 
@@ -87,7 +80,17 @@ export function Detail() {
   };
 
   const isFav = isFavorite(post.id);
-  const isOwner = user && user.id === post.sellerId;
+  const isOwner = user && user.id === post.seller;
+  const availabilityLabel = post.status === 'PUBLISHED'
+    ? 'Disponible'
+    : post.status === 'SOLD'
+      ? 'Vendido'
+      : 'No disponible';
+  const availabilityClass = post.status === 'PUBLISHED'
+    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+    : post.status === 'SOLD'
+      ? 'border-blue-500/30 bg-blue-500/10 text-blue-300'
+      : 'border-slate-700 bg-slate-800 text-slate-300';
 
   return (
     <div className="flex-1 w-full p-6 flex flex-col gap-6">
@@ -148,9 +151,14 @@ export function Detail() {
               <span className="text-2xl font-black text-indigo-400 font-sans">
                 {formatPrice(post.price)}
               </span>
-              <span className="text-[10px] bg-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded-full border border-slate-700">
-                Publicado P2P
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${availabilityClass}`}>
+                  {availabilityLabel}
+                </span>
+                <span className="rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-200">
+                  {post.condition || 'Sin estado'}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
               <MapPin className="w-3.5 h-3.5 text-indigo-400" />
@@ -214,7 +222,7 @@ export function Detail() {
                   variant="outline"
                   className="py-4 rounded-xl text-xs font-semibold border-slate-800 hover:border-slate-700 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition-all text-center"
                 >
-                  <Link to={`/?search=&region=&comuna=&radius=200&sellerId=${post.sellerId}`}>
+                  <Link to={`/perfil/${post.seller}`}>
                     <Eye className="w-3.5 h-3.5" />
                     Ver más
                   </Link>

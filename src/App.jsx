@@ -2,13 +2,14 @@ import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom
 import { HelmetProvider } from 'react-helmet-async';
 import { UserProvider } from '@/context/UserContext';
 import { Toaster } from 'sileo';
-import { Header } from '@/components/Header';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Header } from '@/components/layout/Header';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 
 import { Home } from '@/views/Home';
 import { Login } from '@/views/Login';
 import { Register } from '@/views/Register';
 import { Profile } from '@/views/Profile';
+import { PublicProfile } from '@/views/PublicProfile';
 import { Publish } from '@/views/Publish';
 import { Detail } from '@/views/Detail';
 import { Messages } from '@/views/Messages';
@@ -53,6 +54,8 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+
+                <Route path="/perfil/:profileId" element={<PublicProfile />} />
 
                 <Route
                   path="/publicar"

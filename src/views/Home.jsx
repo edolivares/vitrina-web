@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { Sidebar } from '@/components/Sidebar';
+import { Sidebar } from '@/components/layout/Sidebar';
 import { mockGetPosts } from '@/api/posts';
 import { useUser } from '@/context/UserContext';
-import { EmptyState } from '@/components/EmptyState';
-import { LoadingState } from '@/components/LoadingState';
-import { ProductCard } from '@/components/ProductCard';
+import { EmptyState } from '@/components/marketplace/EmptyState';
+import { LoadingState } from '@/components/marketplace/LoadingState';
+import { ProductCard } from '@/components/marketplace/ProductCard';
+import { formatPrice, formatRelativeTime } from '@/lib/format';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 
 export function Home() {
@@ -26,35 +27,22 @@ export function Home() {
           comuna: searchParams.get('comuna') || '',
           minPrice: searchParams.get('minPrice') || '',
           maxPrice: searchParams.get('maxPrice') || '',
-          condition: searchParams.get('condition') || '',
-          sellerId: searchParams.get('sellerId') || ''
+          condition: searchParams.get('condition') || ''
         };
 
         let fetchedPosts = await mockGetPosts(filters);
 
-        if (user && !filters.sellerId) {
-          fetchedPosts = fetchedPosts.filter(post => post.sellerId !== user.id);
+        if (user) {
+          fetchedPosts = fetchedPosts.filter(post => post.seller !== user.id);
         }
 
-        const now = Date.now();
         setPosts(fetchedPosts.map(post => {
           const postDate = new Date(post.createdAt);
-          const diffHours = Math.floor((now - postDate.getTime()) / 3600000);
-          const diffDays = Math.floor(diffHours / 24);
 
           return {
             ...post,
-            relativeTime:
-              diffHours < 1
-                ? 'Hace unos momentos'
-                : diffHours === 1
-                  ? 'Hace 1 hora'
-                  : diffHours < 24
-                    ? `Hace ${diffHours} horas`
-                    : diffDays === 1
-                      ? 'Hace 1 día'
-                      : `Hace ${diffDays} días`,
-            isNew: postDate.getTime() > now - 3600000 * 24
+            relativeTime: formatRelativeTime(post.createdAt),
+            isNew: postDate.getTime() > Date.now() - 3600000 * 24
           };
         }));
       } catch (error) {
@@ -66,14 +54,6 @@ export function Home() {
 
     loadPosts();
   }, [searchParams, user]);
-
-  const formatPrice = (value) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      maximumFractionDigits: 0
-    }).format(value);
-  };
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row w-full items-start">
@@ -89,9 +69,7 @@ export function Home() {
             Sugerencias de hoy
           </h1>
           <p className="text-xs text-slate-400">
-            {searchParams.get('sellerId')
-              ? 'Mostrando publicaciones de este vendedor'
-              : searchParams.get('comuna')
+            {searchParams.get('comuna')
                 ? `Mostrando publicaciones en ${searchParams.get('comuna')}, ${searchParams.get('region') || ''}`
                 : searchParams.get('region')
                   ? `Mostrando publicaciones en ${searchParams.get('region')}`
@@ -114,7 +92,7 @@ export function Home() {
                 key={post.id}
                 post={post}
                 isFavorite={isFavorite(post.id)}
-                canFavorite={Boolean(user && post.sellerId !== user.id)}
+                canFavorite={Boolean(user && post.seller !== user.id)}
                 onToggleFavorite={toggleFavorite}
                 formatPrice={formatPrice}
               />

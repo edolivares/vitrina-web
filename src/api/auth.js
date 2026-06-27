@@ -1,7 +1,8 @@
 import { loginSchema, registerSchema } from '@/schemas/auth.schema';
+import { MOCK_USER_IDS } from '@/config/constants';
 
 const DEFAULT_USER = {
-  id: 'user-123',
+  id: MOCK_USER_IDS.DIEGO,
   name: 'Diego Valdivia',
   email: 'diego@vitrina.cl',
   avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200'
@@ -32,7 +33,7 @@ export async function mockRegister(userData) {
   await delay(800);
 
   return {
-    id: `user-${Math.random().toString(36).substring(2, 9)}`,
+    id: crypto.randomUUID(),
     name: userData.name,
     email: userData.email,
     avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200'

@@ -221,7 +221,7 @@ export function Sidebar() {
               <SheetDescription>Panel de filtros para la galería de publicaciones.</SheetDescription>
             </SheetHeader>
             <ScrollArea className="h-full">
-              <div className="p-6">
+              <div className="flex min-h-dvh p-6">
                 <FilterControls />
               </div>
             </ScrollArea>

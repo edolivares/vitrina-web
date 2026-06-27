@@ -1,5 +1,5 @@
 import { postSchema, filterSchema } from '@/schemas/post.schema';
-import { FREE_ACCOUNT_LIMITS, STORAGE_KEYS } from '@/config/constants';
+import { FREE_ACCOUNT_LIMITS, MOCK_USER_IDS, STORAGE_KEYS } from '@/config/constants';
 
 const INITIAL_POSTS = [
   {
@@ -13,7 +13,7 @@ const INITIAL_POSTS = [
       'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800',
       'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-999',
+    seller: MOCK_USER_IDS.RODRIGO,
     sellerName: 'Rodrigo Araya',
     sellerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
@@ -31,7 +31,7 @@ const INITIAL_POSTS = [
       'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&q=80&w=800',
       'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-888',
+    seller: MOCK_USER_IDS.PAULA,
     sellerName: 'Paula Espinoza',
     sellerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 6).toISOString(),
@@ -48,7 +48,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-777',
+    seller: MOCK_USER_IDS.VALENTINA,
     sellerName: 'Nicolás Silva',
     sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
@@ -66,7 +66,7 @@ const INITIAL_POSTS = [
       'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&q=80&w=800',
       'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-123',
+    seller: MOCK_USER_IDS.DIEGO,
     sellerName: 'Diego Valdivia',
     sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
@@ -83,7 +83,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1598550476439-6847785fce6e?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-666',
+    seller: MOCK_USER_IDS.MARTIN,
     sellerName: 'Gonzalo Muñoz',
     sellerAvatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
@@ -100,7 +100,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-502',
+    seller: MOCK_USER_IDS.CAMILA,
     sellerName: 'Camila Torres',
     sellerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
@@ -117,7 +117,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-503',
+    seller: MOCK_USER_IDS.TOMAS,
     sellerName: 'Matías Rojas',
     sellerAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
@@ -134,7 +134,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-504',
+    seller: MOCK_USER_IDS.IGNACIA,
     sellerName: 'Fernanda López',
     sellerAvatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 18).toISOString(),
@@ -151,7 +151,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-505',
+    seller: MOCK_USER_IDS.SEBASTIAN,
     sellerName: 'Ignacia Pizarro',
     sellerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 30).toISOString(),
@@ -168,7 +168,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-506',
+    seller: MOCK_USER_IDS.CATALINA,
     sellerName: 'Tomás Herrera',
     sellerAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 36).toISOString(),
@@ -185,7 +185,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-507',
+    seller: MOCK_USER_IDS.FRANCISCO,
     sellerName: 'Daniela Fuentes',
     sellerAvatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 42).toISOString(),
@@ -202,7 +202,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-508',
+    seller: MOCK_USER_IDS.JAVIERA,
     sellerName: 'Sebastián Vidal',
     sellerAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 50).toISOString(),
@@ -219,7 +219,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-509',
+    seller: MOCK_USER_IDS.BENJAMIN,
     sellerName: 'Antonia Salgado',
     sellerAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 60).toISOString(),
@@ -236,7 +236,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-510',
+    seller: MOCK_USER_IDS.ANTONIA,
     sellerName: 'Javiera Contreras',
     sellerAvatar: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 68).toISOString(),
@@ -253,7 +253,7 @@ const INITIAL_POSTS = [
     images: [
       'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&q=80&w=800'
     ],
-    sellerId: 'user-511',
+    seller: MOCK_USER_IDS.NICOLAS,
     sellerName: 'Cristóbal Medina',
     sellerAvatar: 'https://images.unsplash.com/photo-1530268729831-4b0b9e170218?auto=format&fit=crop&q=80&w=200',
     createdAt: new Date(Date.now() - 3600000 * 80).toISOString(),
@@ -266,44 +266,22 @@ function createPostId() {
   return crypto.randomUUID();
 }
 
-function isUuid(value) {
-  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function normalizePostIds(posts) {
-  const usedIds = new Set();
-
-  return posts.map((post) => {
-    let id = isUuid(post.id) ? post.id : createPostId();
-
-    while (usedIds.has(id)) {
-      id = createPostId();
-    }
-
-    usedIds.add(id);
-
-    const normalizedPost = {
-      ...post,
-      id
-    };
-
-    return normalizedPost;
-  });
-}
-
 function hydrateInitialPosts() {
   const storedPosts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
-  const hydratedPosts = normalizePostIds(storedPosts);
+  const hydratedPosts = [...storedPosts];
 
   INITIAL_POSTS.forEach((seedPost) => {
-    const alreadyExists = hydratedPosts.some(post => post.title === seedPost.title && post.sellerId === seedPost.sellerId);
+    const index = hydratedPosts.findIndex(post => post.id === seedPost.id);
 
-    if (alreadyExists) return;
+    if (index === -1) {
+      hydratedPosts.push(seedPost);
+      return;
+    }
 
-    hydratedPosts.push(seedPost);
+    hydratedPosts[index] = seedPost;
   });
 
-  localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(normalizePostIds(hydratedPosts)));
+  localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(hydratedPosts));
 }
 
 if (!localStorage.getItem(STORAGE_KEYS.POSTS)) {
@@ -313,14 +291,7 @@ if (!localStorage.getItem(STORAGE_KEYS.POSTS)) {
 }
 
 function getPostsFromStorage() {
-  const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
-  const normalizedPosts = normalizePostIds(posts);
-
-  if (JSON.stringify(posts) !== JSON.stringify(normalizedPosts)) {
-    savePostsToStorage(normalizedPosts);
-  }
-
-  return normalizedPosts;
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
 }
 
 function savePostsToStorage(posts) {
@@ -382,8 +353,8 @@ export async function mockGetPosts(filters = {}) {
       if (post.condition !== filters.condition) return false;
     }
 
-    if (filters.sellerId) {
-      if (post.sellerId !== filters.sellerId) return false;
+    if (filters.seller) {
+      if (post.seller !== filters.seller) return false;
     }
 
     return true;
@@ -421,7 +392,7 @@ export async function mockCreatePost(postData, currentUser) {
     region: postData.region,
     comuna: postData.comuna,
     images: postData.images,
-    sellerId: currentUser.id,
+    seller: currentUser.id,
     sellerName: currentUser.name,
     sellerAvatar: currentUser.avatarUrl,
     createdAt: new Date().toISOString(),
@@ -457,7 +428,7 @@ export async function mockCreateDraft(currentUser) {
     comuna: '',
     images: [],
     status: 'DRAFT',
-    sellerId: currentUser.id,
+    seller: currentUser.id,
     createdAt: new Date().toISOString()
   };
 
@@ -482,7 +453,7 @@ export async function mockUpdatePost(id, postData, currentUser) {
     throw new Error('Publicación no encontrada');
   }
 
-  if (posts[index].sellerId !== currentUser.id) {
+  if (posts[index].seller !== currentUser.id) {
     throw new Error('No tienes permisos para editar esta publicación');
   }
 
@@ -503,15 +474,87 @@ export async function mockUpdatePost(id, postData, currentUser) {
   return posts[index];
 }
 
-export async function mockGetPostsBySeller(sellerId) {
+export async function mockGetPostsBySeller(seller) {
   await delay(300);
   const posts = getPostsFromStorage();
-  return posts.filter(post => post.sellerId === sellerId).map(post => {
+  return posts.filter(post => post.seller === seller).map(post => {
     if (!post.condition) {
       post.condition = 'Nuevo';
     }
     return post;
   });
+}
+
+export async function mockGetPublicProfile(profileId) {
+  await delay(300);
+  const posts = getPostsFromStorage().filter(post => post.seller === profileId);
+  const activePosts = posts.filter(post => post.status === 'PUBLISHED');
+  const referencePost = posts[0];
+  const profileBio = {
+    [MOCK_USER_IDS.DIEGO]: 'Publico artículos cuidados y respondo rápido para coordinar sin vueltas.',
+    [MOCK_USER_IDS.RODRIGO]: 'Vendo barato y seguro. Prefiero coordinar entregas claras y en lugares cómodos.',
+    [MOCK_USER_IDS.PAULA]: 'Me gusta vender cosas útiles, bien cuidadas y con información transparente.',
+    [MOCK_USER_IDS.VALENTINA]: 'Publico productos de tecnología y hogar en buen estado.',
+    [MOCK_USER_IDS.MARTIN]: 'Vendo artículos seleccionados, limpios y listos para usar.',
+    [MOCK_USER_IDS.CAMILA]: 'Siempre intento responder con detalle y coordinar de forma simple.',
+    [MOCK_USER_IDS.TOMAS]: 'Publico ofertas puntuales y prefiero tratos rápidos, claros y seguros.',
+    [MOCK_USER_IDS.IGNACIA]: 'Vendo cosas de casa en buen estado, con fotos reales y precio justo.',
+    [MOCK_USER_IDS.SEBASTIAN]: 'Me interesa que cada venta sea clara desde el primer mensaje.',
+    [MOCK_USER_IDS.CATALINA]: 'Publico productos que todavía tienen mucha vida útil.',
+    [MOCK_USER_IDS.FRANCISCO]: 'Vendo artículos usados bien cuidados y con entrega coordinada.',
+    [MOCK_USER_IDS.JAVIERA]: 'Me gusta mantener publicaciones simples, honestas y actualizadas.',
+    [MOCK_USER_IDS.BENJAMIN]: 'Publico cosas prácticas para uso diario y respondo consultas con calma.',
+    [MOCK_USER_IDS.ANTONIA]: 'Vendo productos en buen estado y coordino entregas de forma ordenada.',
+    [MOCK_USER_IDS.NICOLAS]: 'Publico artículos deportivos y de uso personal con precios conversables.'
+  };
+  const profileReviews = [
+    {
+      id: 'review-1',
+      author: 'María José',
+      rating: 5,
+      date: '2026-06-10T12:00:00.000Z',
+      comment: 'Respondió rápido y el producto estaba tal como se veía en las fotos.'
+    },
+    {
+      id: 'review-2',
+      author: 'Felipe R.',
+      rating: 5,
+      date: '2026-05-28T12:00:00.000Z',
+      comment: 'Buena coordinación para la entrega, todo claro desde el primer mensaje.'
+    },
+    {
+      id: 'review-3',
+      author: 'Camila T.',
+      rating: 4,
+      date: '2026-05-02T12:00:00.000Z',
+      comment: 'El artículo estaba en buen estado y el precio fue justo.'
+    }
+  ];
+
+  if (!referencePost) {
+    throw new Error('Perfil no encontrado');
+  }
+
+  return {
+    profile: {
+      id: profileId,
+      name: referencePost.sellerName,
+      avatarUrl: referencePost.sellerAvatar,
+      reviewScore: 4.8,
+      reviewCount: 37,
+      reviewSummary: [
+        { rating: 5, count: 30 },
+        { rating: 4, count: 5 },
+        { rating: 3, count: 1 },
+        { rating: 2, count: 1 },
+        { rating: 1, count: 0 }
+      ],
+      reviews: profileReviews,
+      joinedAt: '2024-05-12T12:00:00.000Z',
+      bio: profileBio[profileId] || 'Publico artículos con información clara y coordinación directa.'
+    },
+    posts: activePosts
+  };
 }
 
 export async function mockUpdatePostStatus(id, status) {

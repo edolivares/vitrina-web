@@ -26,5 +26,5 @@ export const filterSchema = z.object({
   minPrice: z.union([z.string(), z.number()]).optional(),
   maxPrice: z.union([z.string(), z.number()]).optional(),
   condition: z.string().optional(),
-  sellerId: z.string().optional()
+  seller: z.union([z.string().uuid(), z.literal('')]).optional()
 });

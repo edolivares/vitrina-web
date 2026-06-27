@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async';
 import { useUser } from '@/context/UserContext';
 import { mockGetChats, mockGetMessages, mockSendMessage } from '@/api/messages';
 import { sileo } from 'sileo';
+import { formatPrice, formatTime } from '@/lib/format';
 
 export function Messages() {
   const { user } = useUser();
@@ -126,15 +127,7 @@ export function Messages() {
   };
 
   const getOtherParticipantName = (chat) => {
-    return chat.sellerId === user.id ? chat.buyerName : chat.sellerName;
-  };
-
-  const formatPrice = (value) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      maximumFractionDigits: 0
-    }).format(value);
+    return chat.seller === user.id ? chat.buyerName : chat.sellerName;
   };
 
   if (!user) return null;
@@ -193,7 +186,7 @@ export function Messages() {
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold text-slate-300 truncate">{otherName}</span>
                       <span className="text-[9px] text-slate-500">
-                        {new Date(chat.updatedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                        {formatTime(chat.updatedAt)}
                       </span>
                     </div>
                     <span className="text-[11px] font-medium text-slate-400 truncate">{chat.postTitle}</span>
@@ -246,7 +239,7 @@ export function Messages() {
                 <div className="flex-1 flex justify-center items-center text-slate-500 text-xs">Cargando mensajes...</div>
               ) : (
                 messages.map(msg => {
-                  const isMe = msg.senderId === user.id;
+                  const isMe = msg.sender === user.id;
                   return (
                     <div
                       key={msg.id}
@@ -264,7 +257,7 @@ export function Messages() {
                         {msg.content}
                       </div>
                       <span className="text-[9px] text-slate-400 mt-1 pl-1 pr-1">
-                        {new Date(msg.createdAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                        {formatTime(msg.createdAt)}
                       </span>
                     </div>
                   );

@@ -10,9 +10,10 @@ import { sileo } from 'sileo';
 import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { FREE_ACCOUNT_LIMITS, STORAGE_KEYS } from '@/config/constants';
-import { ConfirmAction } from '@/components/ConfirmAction';
+import { ConfirmAction } from '@/components/feedback/ConfirmAction';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatDate, formatPrice } from '@/lib/format';
 
 const INITIAL_DRAFTS = [
   {
@@ -269,16 +270,6 @@ export function Profile() {
     }, 900);
   };
 
-  const formatPrice = (value) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
-
-
   if (!user) return null;
 
   return (
@@ -435,7 +426,7 @@ export function Profile() {
                           <Link
                             to={`/mensajes/publicacion/${post.id}`}
                             className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all duration-250"
-                            title="Ver mensajes de esta publicaciÃ³n"
+                            title="Ver mensajes de esta publicación"
                           >
                             <MessageSquare className="w-4 h-4" />
                           </Link>
@@ -806,7 +797,7 @@ export function Profile() {
                       <div className="flex items-center justify-between border-b border-slate-800/70 pb-2">
                         <span className="text-slate-500">Ultimo contacto</span>
                         <span className="font-semibold text-slate-200">
-                          {metrics.lastContact ? new Date(metrics.lastContact).toLocaleDateString('es-CL') : 'Sin mensajes'}
+                          {metrics.lastContact ? formatDate(metrics.lastContact) : 'Sin mensajes'}
                         </span>
                       </div>
                       <p className="rounded-xl bg-indigo-500/10 p-3 text-indigo-200">

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
-import { IconTooltip } from '@/components/IconTooltip';
+import { IconTooltip } from '@/components/feedback/IconTooltip';
 
 export function ProductCard({ post, isFavorite = false, canFavorite = false, onToggleFavorite, formatPrice }) {
   return (
