@@ -75,7 +75,7 @@ export function Detail() {
 
       const chat = await mockCreateChat(post, user);
 
-      navigate(`/mensajes?chatId=${chat.id}`);
+      navigate(`/mensajes/${chat.id}`);
     } catch (error) {
       sileo.error({
         title: 'No se pudo iniciar el chat',

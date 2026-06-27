@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { Send, MessageSquare, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useUser } from '@/context/UserContext';
@@ -8,12 +8,16 @@ import { sileo } from 'sileo';
 
 export function Messages() {
   const { user } = useUser();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeChatId = searchParams.get('chatId');
+  const navigate = useNavigate();
+  const { chatId: routeChatId, postId: routePostId } = useParams();
+  const [searchParams] = useSearchParams();
+  const legacyChatId = searchParams.get('chatId');
+  const activeChatId = routeChatId || legacyChatId;
+  const legacyPostId = searchParams.get('postId');
+  const activePostId = routePostId || searchParams.get('post');
 
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
-  const [activeChat, setActiveChat] = useState(null);
 
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -22,22 +26,35 @@ export function Messages() {
 
   const messagesEndRef = useRef(null);
 
+  const visibleChats = useMemo(() => {
+    if (activePostId) {
+      return chats.filter(chat => chat.postId === activePostId);
+    }
+
+    if (legacyPostId) {
+      return chats.filter(chat => chat.postId === legacyPostId);
+    }
+
+    return chats;
+  }, [activePostId, chats, legacyPostId]);
+
+  const activeChat = useMemo(() => {
+    if (!activeChatId) return null;
+
+    return visibleChats.find(chat => chat.id === activeChatId) || null;
+  }, [activeChatId, visibleChats]);
+
   const loadChats = useCallback(async () => {
     if (!user) return;
     try {
       const fetchedChats = await mockGetChats(user.id);
       setChats(fetchedChats);
-
-      if (activeChatId) {
-        const found = fetchedChats.find(c => c.id === activeChatId);
-        if (found) setActiveChat(found);
-      }
     } catch (error) {
       console.error('Error cargando conversaciones:', error);
     } finally {
       setLoadingChats(false);
     }
-  }, [user, activeChatId]);
+  }, [user]);
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -46,10 +63,16 @@ export function Messages() {
   }, [loadChats]);
 
   useEffect(() => {
+    if (!legacyChatId || routeChatId) return;
+
+    const suffix = activePostId ? `?post=${activePostId}` : '';
+    navigate(`/mensajes/${legacyChatId}${suffix}`, { replace: true });
+  }, [activePostId, legacyChatId, navigate, routeChatId]);
+
+  useEffect(() => {
     async function loadMessages() {
-      if (!activeChatId) {
+      if (!activeChatId || !activeChat) {
         setMessages([]);
-        setActiveChat(null);
         return;
       }
       setLoadingMessages(true);
@@ -68,7 +91,7 @@ export function Messages() {
     }
 
     loadMessages();
-  }, [activeChatId]);
+  }, [activeChat, activeChatId]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -99,7 +122,7 @@ export function Messages() {
   };
 
   const selectChat = (chatId) => {
-    setSearchParams({ chatId });
+    navigate(activePostId ? `/mensajes/${chatId}?post=${activePostId}` : `/mensajes/${chatId}`);
   };
 
   const getOtherParticipantName = (chat) => {
@@ -130,20 +153,31 @@ export function Messages() {
         <div className="p-4 border-b border-slate-800">
           <h2 className="text-lg font-bold text-slate-200 flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-indigo-400" />
-            Mensajes
+            {activePostId || legacyPostId ? 'Mensajes del producto' : 'Mensajes'}
           </h2>
+          {(activePostId || legacyPostId) && (
+            <button
+              type="button"
+              onClick={() => navigate('/mensajes')}
+              className="mt-2 text-xs font-semibold text-indigo-300 transition-colors hover:text-indigo-200"
+            >
+              Ver todas las conversaciones
+            </button>
+          )}
         </div>
 
         {loadingChats ? (
           <div className="flex-1 flex justify-center items-center text-slate-500 text-xs">Cargando bandeja...</div>
-        ) : chats.length === 0 ? (
+        ) : visibleChats.length === 0 ? (
           <div className="flex-1 flex flex-col justify-center items-center p-6 text-center text-slate-500 gap-2">
             <MessageSquare className="w-8 h-8 text-slate-700" />
-            <span className="text-xs">No tienes conversaciones activas</span>
+            <span className="text-xs">
+              {activePostId || legacyPostId ? 'No hay conversaciones para esta publicacion' : 'No tienes conversaciones activas'}
+            </span>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto">
-            {chats.map(chat => {
+            {visibleChats.map(chat => {
               const isActive = chat.id === activeChatId;
               const otherName = getOtherParticipantName(chat);
               return (
@@ -184,7 +218,7 @@ export function Messages() {
 
               {}
               <button
-                onClick={() => setSearchParams({})}
+                onClick={() => navigate(activePostId ? `/mensajes/publicacion/${activePostId}` : '/mensajes')}
                 className="p-1.5 rounded-lg bg-slate-950 text-slate-400 hover:text-slate-200 md:hidden transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />

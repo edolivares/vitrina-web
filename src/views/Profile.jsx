@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@/context/UserContext';
 import { mockGetPostsBySeller, mockUpdatePostStatus, mockGetPostById } from '@/api/posts';
+import { mockGetChats } from '@/api/messages';
 import { Eye, Edit, Trash2, AlertCircle, Heart, FolderHeart, FileText, MessageSquare, TrendingUp, Archive, Calendar, Star, Upload, Plus, Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -51,6 +52,32 @@ function ProfileCardsSkeleton({ count = 5 }) {
   );
 }
 
+function getPostMetrics(post, chats = []) {
+  const metricSeed = post.id.split('').reduce((total, char) => total + char.charCodeAt(0), 0);
+  const views = metricSeed + 45;
+  const favorites = (metricSeed % 35) + 3;
+  const productChats = chats.filter(chat => chat.postId === post.id);
+  const chatCount = productChats.length;
+  const conversion = views > 0 ? Math.round(((favorites + chatCount) / views) * 100) : 0;
+  const weekDays = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'];
+  const weeklyViews = weekDays.map((day, index) => {
+    const dayFactor = index + 1;
+    return {
+      day,
+      value: Math.round((views / 16) + (metricSeed * dayFactor) % 28 + dayFactor * 3)
+    };
+  });
+
+  return {
+    views,
+    favorites,
+    chatCount,
+    conversion,
+    weeklyViews,
+    lastContact: productChats[0]?.updatedAt
+  };
+}
+
 export function Profile() {
   const { user, favorites, toggleFavorite, updateUser } = useUser();
   const navigate = useNavigate();
@@ -61,6 +88,7 @@ export function Profile() {
   const [userPosts, setUserPosts] = useState([]);
   const [drafts, setDrafts] = useState([]);
   const [favPosts, setFavPosts] = useState([]);
+  const [sellerChats, setSellerChats] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -81,6 +109,9 @@ export function Profile() {
 
       const posts = await mockGetPostsBySeller(user.id);
       setUserPosts(posts);
+
+      const chats = await mockGetChats(user.id);
+      setSellerChats(chats);
 
       const savedDrafts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DRAFTS) || '[]');
       const postSignatures = new Set(posts.map(post => `${post.title}|${post.price}|${post.images?.[0] || ''}`));
@@ -150,7 +181,7 @@ export function Profile() {
   const handleDeletePost = (postId) => {
     try {
       const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
-      const updatedPosts = posts.filter(p => p.id !== Number(postId));
+      const updatedPosts = posts.filter(p => p.id !== postId);
       localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(updatedPosts));
       loadProfileData();
       sileo.success({
@@ -363,6 +394,11 @@ export function Profile() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                   {userPosts.map(post => (
                     <div key={post.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700/80 hover:-translate-y-1 transition-all duration-300 flex flex-col relative">
+                      {(() => {
+                        const metrics = getPostMetrics(post, sellerChats);
+
+                        return (
+                          <>
                       {/* Area de Imagen */}
                       <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
                         <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
@@ -381,7 +417,7 @@ export function Profile() {
                         {/* Contador de vistas (Top Right) */}
                         <div className="absolute top-3 right-3 bg-slate-950/60 border border-slate-800/80 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm flex items-center gap-1">
                           <Eye className="w-3 h-3" />
-                          <span>{post.id * 153 + 45}</span>
+                          <span>{metrics.views}</span>
                         </div>
                       </div>
 
@@ -397,9 +433,9 @@ export function Profile() {
                         <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between gap-1">
                           {/* 1. Chats de esta publicacion */}
                           <Link
-                            to="/mensajes"
+                            to={`/mensajes/publicacion/${post.id}`}
                             className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all duration-250"
-                            title="Ver mensajes"
+                            title="Ver mensajes de esta publicaciÃ³n"
                           >
                             <MessageSquare className="w-4 h-4" />
                           </Link>
@@ -469,6 +505,9 @@ export function Profile() {
                           </ConfirmAction>
                         </div>
                       </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -672,7 +711,7 @@ export function Profile() {
       </Dialog>
 
       <Dialog open={Boolean(metricsPost)} onOpenChange={(open) => !open && setMetricsPost(null)}>
-        <DialogContent className="max-w-md bg-slate-900 border border-slate-800 text-slate-200 p-6 rounded-2xl shadow-xl">
+        <DialogContent className="max-h-[90vh] w-[min(92vw,920px)] max-w-none overflow-y-auto bg-slate-900 border border-slate-800 text-slate-200 p-6 rounded-2xl shadow-xl sm:max-w-none">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-100">Métricas de publicación</DialogTitle>
             <DialogDescription className="text-sm text-slate-400 mt-1">
@@ -680,22 +719,107 @@ export function Profile() {
             </DialogDescription>
           </DialogHeader>
 
-          {metricsPost && (
-            <div className="grid grid-cols-3 gap-3 py-4">
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
-                <span className="block text-lg font-bold text-slate-100">{metricsPost.id * 153 + 45}</span>
-                <span className="text-[10px] text-slate-500">Visitas</span>
+          {metricsPost && (() => {
+            const metrics = getPostMetrics(metricsPost, sellerChats);
+            const maxWeekValue = Math.max(...metrics.weeklyViews.map(day => day.value));
+
+            return (
+              <div className="flex flex-col gap-5 py-4">
+                <div className="grid grid-cols-1 gap-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-4 md:grid-cols-[160px_minmax(0,1fr)_auto] md:items-center">
+                  <img
+                    src={metricsPost.images[0]}
+                    alt={metricsPost.title}
+                    className="h-32 w-full rounded-xl object-cover md:h-28"
+                  />
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Publicacion</span>
+                    <h3 className="text-lg font-bold leading-snug text-slate-100">{metricsPost.title}</h3>
+                    <span className="text-sm font-semibold text-indigo-300">{formatPrice(metricsPost.price)}</span>
+                  </div>
+                  <Link
+                    to={`/mensajes/publicacion/${metricsPost.id}`}
+                    onClick={() => setMetricsPost(null)}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 md:w-auto"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Ver mensajes
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                    <span className="block text-xl font-bold text-slate-100">{metrics.views}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500">Visitas</span>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                    <span className="block text-xl font-bold text-slate-100">{metrics.favorites}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500">Favoritos</span>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                    <span className="block text-xl font-bold text-slate-100">{metrics.chatCount}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500">Conversaciones</span>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                    <span className="block text-xl font-bold text-slate-100">{metrics.conversion}%</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500">Interes estimado</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-100">Visitas de la semana</h4>
+                        <p className="text-xs text-slate-500">Distribucion simulada para comparar dias.</p>
+                      </div>
+                      <TrendingUp className="w-4 h-4 text-indigo-300" />
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {metrics.weeklyViews.map((dayMetric) => (
+                        <div key={dayMetric.day} className="grid grid-cols-[72px_minmax(0,1fr)_48px] items-center gap-3">
+                          <span className="text-xs font-medium text-slate-400">{dayMetric.day}</span>
+                          <div className="h-3 overflow-hidden rounded-full bg-slate-900">
+                            <div
+                              className="h-full rounded-full bg-indigo-500"
+                              style={{ width: `${Math.max(10, (dayMetric.value / maxWeekValue) * 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-right text-xs font-semibold text-slate-200">{dayMetric.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <h4 className="text-sm font-bold text-slate-100">Resumen</h4>
+                    <div className="mt-4 flex flex-col gap-3 text-xs">
+                      <div className="flex items-center justify-between border-b border-slate-800/70 pb-2">
+                        <span className="text-slate-500">Estado</span>
+                        <span className="font-semibold text-slate-200">
+                          {metricsPost.status === 'PUBLISHED' ? 'Publicada' : metricsPost.status === 'SOLD' ? 'Vendida' : 'Archivada'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-slate-800/70 pb-2">
+                        <span className="text-slate-500">Ubicacion</span>
+                        <span className="font-semibold text-slate-200">{metricsPost.comuna}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-slate-800/70 pb-2">
+                        <span className="text-slate-500">Ultimo contacto</span>
+                        <span className="font-semibold text-slate-200">
+                          {metrics.lastContact ? new Date(metrics.lastContact).toLocaleDateString('es-CL') : 'Sin mensajes'}
+                        </span>
+                      </div>
+                      <p className="rounded-xl bg-indigo-500/10 p-3 text-indigo-200">
+                        {metrics.chatCount > 0
+                          ? 'Esta publicacion ya tiene conversaciones asociadas. Conviene responder desde la vista de mensajes filtrada.'
+                          : 'Aun no hay conversaciones para esta publicacion. Las visitas y favoritos ayudan a estimar interes inicial.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
-                <span className="block text-lg font-bold text-slate-100">{metricsPost.id * 7 + 3}</span>
-                <span className="text-[10px] text-slate-500">Favoritos</span>
-              </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
-                <span className="block text-lg font-bold text-slate-100">{metricsPost.id * 2 + 1}</span>
-                <span className="text-[10px] text-slate-500">Chats</span>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

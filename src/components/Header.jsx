@@ -1,4 +1,4 @@
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, MessageSquare, User, LogOut } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -6,6 +6,9 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 export function Header({ showLogo = true }) {
   const { user, logout } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
+  const authRedirect = `${location.pathname}${location.search}`;
+  const authQuery = authRedirect === '/' ? '' : `?redirect=${encodeURIComponent(authRedirect)}`;
 
   const handleLogout = () => {
     logout();
@@ -37,28 +40,27 @@ export function Header({ showLogo = true }) {
       )}
 
       {}
-      <nav className="flex items-center gap-2">
-        <NavLink to="/" end className={navItemClass}>
-          <Home className="w-4 h-4" />
-          <span className="hidden sm:inline">Inicio</span>
-        </NavLink>
+      {user && (
+        <nav className="flex items-center gap-2">
+          <NavLink to="/" end className={navItemClass}>
+            <Home className="w-4 h-4" />
+            <span className="hidden sm:inline">Inicio</span>
+          </NavLink>
 
-        <NavLink to="/mensajes" className={navItemClass}>
-          <div className="relative">
-            <MessageSquare className="w-4 h-4" />
-            {}
-            {user && (
+          <NavLink to="/mensajes" className={navItemClass}>
+            <div className="relative">
+              <MessageSquare className="w-4 h-4" />
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-slate-900 animate-pulse" />
-            )}
-          </div>
-          <span className="hidden sm:inline">Mensajes</span>
-        </NavLink>
+            </div>
+            <span className="hidden sm:inline">Mensajes</span>
+          </NavLink>
 
-        <NavLink to="/perfil" className={navItemClass}>
-          <User className="w-4 h-4" />
-          <span className="hidden sm:inline">Mi Perfil</span>
-        </NavLink>
-      </nav>
+          <NavLink to="/perfil" className={navItemClass}>
+            <User className="w-4 h-4" />
+            <span className="hidden sm:inline">Mi Perfil</span>
+          </NavLink>
+        </nav>
+      )}
 
       {}
       <div className="flex items-center gap-4">
@@ -79,12 +81,20 @@ export function Header({ showLogo = true }) {
             </button>
           </div>
         ) : (
-          <Link
-            to="/login"
-            className="px-4 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/20 active:scale-95"
-          >
-            Ingresar
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/registro${authQuery}`}
+              className="hidden sm:inline-flex px-4 py-1.5 rounded-lg text-sm font-semibold text-indigo-200 hover:text-white hover:bg-indigo-500/10 transition-all active:scale-95"
+            >
+              Crea tu cuenta
+            </Link>
+            <Link
+              to={`/login${authQuery}`}
+              className="px-4 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/20 active:scale-95"
+            >
+              Ingresar
+            </Link>
+          </div>
         )}
       </div>
     </header>

@@ -10,7 +10,7 @@ export const messageSchema = z.object({
 
 export const chatSchema = z.object({
   id: z.string(),
-  postId: z.number(),
+  postId: z.string().uuid(),
   postTitle: z.string(),
   postPrice: z.number(),
   postImage: z.string(),

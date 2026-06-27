@@ -55,7 +55,7 @@ export function UserProvider({ children }) {
     if (!user) return;
 
     setFavorites((prevFavorites) => {
-      const id = Number(postId);
+      const id = String(postId);
       if (prevFavorites.includes(id)) {
         return prevFavorites.filter(favId => favId !== id);
       } else {
@@ -65,7 +65,7 @@ export function UserProvider({ children }) {
   };
 
   const isFavorite = (postId) => {
-    return favorites.includes(Number(postId));
+    return favorites.includes(String(postId));
   };
 
   return (

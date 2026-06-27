@@ -25,5 +25,6 @@ export const filterSchema = z.object({
   radius: z.number().min(0).max(500).default(200).optional(),
   minPrice: z.union([z.string(), z.number()]).optional(),
   maxPrice: z.union([z.string(), z.number()]).optional(),
-  condition: z.string().optional()
+  condition: z.string().optional(),
+  sellerId: z.string().optional()
 });

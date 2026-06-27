@@ -3,7 +3,7 @@ import { FREE_ACCOUNT_LIMITS, STORAGE_KEYS } from '@/config/constants';
 
 const INITIAL_POSTS = [
   {
-    id: 1,
+    id: '7bcb4b49-45f2-4d95-9005-7f0583b2f3a1',
     title: 'Bicicleta Trek Marlin 5 Aro 29',
     price: 420000,
     description: 'Bicicleta de montaña Trek Marlin 5 en excelente estado. Marco de aluminio talla M, transmisión Shimano de 2x8 velocidades, frenos de disco hidráulicos Tektro. Mantención recién hecha. Lista para pedalear.',
@@ -21,7 +21,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 2,
+    id: '587cd88e-e6bd-4d83-aa91-6f1c88de96e5',
     title: 'Mesa de centro madera rústica',
     price: 850000,
     description: 'Mesa de centro fabricada a mano con madera de roble reciclada. Acabado con barniz poliuretano mate para alta resistencia. Medidas: 100cm de largo x 60cm de ancho x 45cm de alto. Patas metálicas estilo hairpin.',
@@ -39,7 +39,7 @@ const INITIAL_POSTS = [
     condition: 'Nuevo'
   },
   {
-    id: 3,
+    id: '413765db-1349-40d3-b70e-a48dcba2e999',
     title: 'Teclado Mecánico Keychron K2 v2',
     price: 90000,
     description: 'Teclado mecánico inalámbrico formato 75%. Switch Gateron Brown lubricados de fábrica, keycaps de PBT adicionales. Retroiluminación RGB. Compatible con Mac, Windows y Android. Conexión Bluetooth o cable tipo C. Caja y accesorios originales completos.',
@@ -56,7 +56,7 @@ const INITIAL_POSTS = [
     condition: 'Nuevo'
   },
   {
-    id: 4,
+    id: '611522b0-d6bc-4a6d-9442-3834951bc246',
     title: 'Guitarra Electroacústica Fender FA-125CE',
     price: 130000,
     description: 'Guitarra electroacústica Fender con cutaway. Tapa de abeto laminado, aros y fondo de caoba. Preamplificador Fishman integrado con afinador. Incluye funda acolchada, correa y set de uñetas. Excelente sonido, ideal para principiantes e intermedios.',
@@ -74,7 +74,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 5,
+    id: 'a58c381c-2b33-4db2-9dc8-7fcb7f1b011d',
     title: 'Silla Gamer Ergonómica Cougar Armor',
     price: 150000,
     description: 'Silla gamer Cougar modelo Armor One. Reclinable hasta 180 grados, reposabrazos 2D regulables en altura y rotación. Soporte de pistón clase 4 de alta resistencia. Incluye cojín lumbar y cervical. Sin detalles estéticos, muy poco uso.',
@@ -91,7 +91,7 @@ const INITIAL_POSTS = [
     condition: 'Nuevo'
   },
   {
-    id: 6,
+    id: '0d26e43c-3102-4822-ad22-5b621403822e',
     title: 'Cámara Sony Alpha a6000 con lente kit',
     price: 380000,
     description: 'Cámara mirrorless Sony Alpha a6000 con lente 16-50mm. Incluye batería, cargador, correa y bolso compacto. Ideal para fotografía de viajes, retratos y contenido para redes.',
@@ -108,7 +108,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 7,
+    id: 'e39f1994-c0f7-41b2-8bb6-fccf861270de',
     title: 'Monitor LG UltraWide 29 pulgadas',
     price: 210000,
     description: 'Monitor LG UltraWide de 29 pulgadas, resolución 2560x1080, panel IPS y entrada HDMI. Muy cómodo para trabajar con varias ventanas o editar contenido.',
@@ -125,7 +125,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 8,
+    id: '3eea6e4e-b119-426a-9c40-5828bca3e688',
     title: 'Set de comedor nórdico 4 sillas',
     price: 260000,
     description: 'Mesa redonda de estilo nórdico con cuatro sillas tapizadas. Buen estado general, firme y lista para uso diario en departamento o comedor pequeño.',
@@ -142,7 +142,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 9,
+    id: '811f36db-ae54-4d3d-9f46-6013232e87cd',
     title: 'Audífonos Sony WH-1000XM4',
     price: 190000,
     description: 'Audífonos inalámbricos con cancelación de ruido activa. Incluye estuche, cable de carga y cable auxiliar. Batería en excelente estado.',
@@ -159,7 +159,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 10,
+    id: '8121e705-62b8-488b-bb2b-b52a5dc3fd59',
     title: 'Notebook Lenovo IdeaPad Ryzen 5',
     price: 450000,
     description: 'Notebook Lenovo IdeaPad con procesador Ryzen 5, 16GB RAM y SSD de 512GB. Equipo rápido para estudios, oficina y navegación intensiva.',
@@ -176,7 +176,7 @@ const INITIAL_POSTS = [
     condition: 'Nuevo'
   },
   {
-    id: 11,
+    id: '57c5f5d5-87fa-4c16-b43a-e7ef198749b3',
     title: 'Coche bebé compacto plegable',
     price: 115000,
     description: 'Coche de bebé liviano, plegable y fácil de transportar. Incluye capota, canasto inferior y freno trasero. Tapiz limpio y sin roturas.',
@@ -193,7 +193,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 12,
+    id: '9f8af67a-f5da-4ff0-8dbd-a6a0908d248c',
     title: 'Parlante JBL Charge 5 azul',
     price: 125000,
     description: 'Parlante Bluetooth resistente al agua, sonido potente y batería de larga duración. Se entrega con cable USB-C y caja original.',
@@ -210,7 +210,7 @@ const INITIAL_POSTS = [
     condition: 'Nuevo'
   },
   {
-    id: 13,
+    id: '2c74fda6-aa0b-4d0e-a615-058965c8c825',
     title: 'Mochila The North Face Borealis',
     price: 68000,
     description: 'Mochila urbana de 28 litros con compartimento para notebook, bolsillos laterales y espalda acolchada. Perfecta para universidad o trabajo.',
@@ -227,7 +227,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 14,
+    id: 'c7496e35-47cf-4303-86f2-c2b32543fa50',
     title: 'Aspiradora robot Xiaomi Mi Robot',
     price: 175000,
     description: 'Aspiradora robot Xiaomi con mapeo inteligente, app móvil y base de carga. Funciona correctamente y se entrega con repuestos de filtro.',
@@ -244,7 +244,7 @@ const INITIAL_POSTS = [
     condition: 'Usado'
   },
   {
-    id: 15,
+    id: '08fe2041-15e7-41a7-8e77-9dab7b97669b',
     title: 'Patines Rollerblade Zetrablade talla 42',
     price: 95000,
     description: 'Patines recreativos Rollerblade talla 42, ruedas en buen estado y botín cómodo. Ideales para retomar actividad física al aire libre.',
@@ -262,25 +262,48 @@ const INITIAL_POSTS = [
   }
 ];
 
+function createPostId() {
+  return crypto.randomUUID();
+}
+
+function isUuid(value) {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function normalizePostIds(posts) {
+  const usedIds = new Set();
+
+  return posts.map((post) => {
+    let id = isUuid(post.id) ? post.id : createPostId();
+
+    while (usedIds.has(id)) {
+      id = createPostId();
+    }
+
+    usedIds.add(id);
+
+    const normalizedPost = {
+      ...post,
+      id
+    };
+
+    return normalizedPost;
+  });
+}
+
 function hydrateInitialPosts() {
   const storedPosts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
-  const hydratedPosts = [...storedPosts];
+  const hydratedPosts = normalizePostIds(storedPosts);
 
   INITIAL_POSTS.forEach((seedPost) => {
     const alreadyExists = hydratedPosts.some(post => post.title === seedPost.title && post.sellerId === seedPost.sellerId);
 
     if (alreadyExists) return;
 
-    const idInUse = hydratedPosts.some(post => post.id === seedPost.id);
-    const nextId = hydratedPosts.length > 0 ? Math.max(...hydratedPosts.map(post => Number(post.id) || 0)) + 1 : seedPost.id;
-
-    hydratedPosts.push({
-      ...seedPost,
-      id: idInUse ? nextId : seedPost.id
-    });
+    hydratedPosts.push(seedPost);
   });
 
-  localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(hydratedPosts));
+  localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(normalizePostIds(hydratedPosts)));
 }
 
 if (!localStorage.getItem(STORAGE_KEYS.POSTS)) {
@@ -290,7 +313,14 @@ if (!localStorage.getItem(STORAGE_KEYS.POSTS)) {
 }
 
 function getPostsFromStorage() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
+  const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
+  const normalizedPosts = normalizePostIds(posts);
+
+  if (JSON.stringify(posts) !== JSON.stringify(normalizedPosts)) {
+    savePostsToStorage(normalizedPosts);
+  }
+
+  return normalizedPosts;
 }
 
 function savePostsToStorage(posts) {
@@ -316,7 +346,7 @@ export async function mockGetPosts(filters = {}) {
 
   const normalizedPosts = posts.map(post => {
     if (!post.condition) {
-      post.condition = (post.id === 1 || post.id === 4) ? 'Usado' : 'Nuevo';
+      post.condition = 'Nuevo';
     }
     return post;
   });
@@ -363,12 +393,12 @@ export async function mockGetPosts(filters = {}) {
 export async function mockGetPostById(id) {
   await delay(300);
   const posts = getPostsFromStorage();
-  const post = posts.find(p => p.id === Number(id));
+  const post = posts.find(p => p.id === id);
   if (!post) {
     throw new Error('Publicación no encontrada');
   }
   if (!post.condition) {
-    post.condition = (post.id === 1 || post.id === 4) ? 'Usado' : 'Nuevo';
+    post.condition = 'Nuevo';
   }
   return post;
 }
@@ -384,7 +414,7 @@ export async function mockCreatePost(postData, currentUser) {
 
   const posts = getPostsFromStorage();
   const newPost = {
-    id: posts.length > 0 ? Math.max(...posts.map(p => p.id)) + 1 : 1,
+    id: createPostId(),
     title: postData.title,
     price: Number(postData.price),
     description: postData.description,
@@ -446,7 +476,7 @@ export async function mockUpdatePost(id, postData, currentUser) {
   await delay(600);
 
   const posts = getPostsFromStorage();
-  const index = posts.findIndex(post => post.id === Number(id));
+  const index = posts.findIndex(post => post.id === id);
 
   if (index === -1) {
     throw new Error('Publicación no encontrada');
@@ -478,7 +508,7 @@ export async function mockGetPostsBySeller(sellerId) {
   const posts = getPostsFromStorage();
   return posts.filter(post => post.sellerId === sellerId).map(post => {
     if (!post.condition) {
-      post.condition = (post.id === 1 || post.id === 4) ? 'Usado' : 'Nuevo';
+      post.condition = 'Nuevo';
     }
     return post;
   });
@@ -487,7 +517,7 @@ export async function mockGetPostsBySeller(sellerId) {
 export async function mockUpdatePostStatus(id, status) {
   await delay(400);
   const posts = getPostsFromStorage();
-  const index = posts.findIndex(p => p.id === Number(id));
+  const index = posts.findIndex(p => p.id === id);
   if (index === -1) {
     throw new Error('Publicación no encontrada');
   }

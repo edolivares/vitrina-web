@@ -71,6 +71,24 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+
+                <Route
+                  path="/mensajes/:chatId"
+                  element={
+                    <ProtectedRoute>
+                      <Messages />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/mensajes/publicacion/:postId"
+                  element={
+                    <ProtectedRoute>
+                      <Messages />
+                    </ProtectedRoute>
+                  }
+                />
               </Route>
 
               <Route element={<FullWidthLayout />}>
