@@ -6,3 +6,9 @@ export const STORAGE_KEYS = {
   CHATS: 'vitrina_chats',
   MESSAGES: 'vitrina_messages'
 };
+
+export const FREE_ACCOUNT_LIMITS = {
+  MAX_ACTIVE_POSTS: 5,
+  MAX_DRAFTS: 5,
+  MAX_IMAGES_PER_POST: 5
+};

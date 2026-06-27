@@ -4,6 +4,7 @@ import { Send, MessageSquare, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useUser } from '@/context/UserContext';
 import { mockGetChats, mockGetMessages, mockSendMessage } from '@/api/messages';
+import { sileo } from 'sileo';
 
 export function Messages() {
   const { user } = useUser();
@@ -88,7 +89,10 @@ export function Messages() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 50);
     } catch {
-      alert('No se pudo enviar el mensaje');
+      sileo.error({
+        title: 'No se pudo enviar el mensaje',
+        description: 'El mensaje quedó sin enviar en esta maqueta.'
+      });
     } finally {
       setSending(false);
     }

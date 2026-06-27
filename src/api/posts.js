@@ -1,5 +1,5 @@
 import { postSchema, filterSchema } from '@/schemas/post.schema';
-import { STORAGE_KEYS } from '@/config/constants';
+import { FREE_ACCOUNT_LIMITS, STORAGE_KEYS } from '@/config/constants';
 
 const INITIAL_POSTS = [
   {
@@ -89,11 +89,204 @@ const INITIAL_POSTS = [
     createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
     status: 'PUBLISHED',
     condition: 'Nuevo'
+  },
+  {
+    id: 6,
+    title: 'Cámara Sony Alpha a6000 con lente kit',
+    price: 380000,
+    description: 'Cámara mirrorless Sony Alpha a6000 con lente 16-50mm. Incluye batería, cargador, correa y bolso compacto. Ideal para fotografía de viajes, retratos y contenido para redes.',
+    region: 'Región Metropolitana',
+    comuna: 'Las Condes',
+    images: [
+      'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-502',
+    sellerName: 'Camila Torres',
+    sellerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Usado'
+  },
+  {
+    id: 7,
+    title: 'Monitor LG UltraWide 29 pulgadas',
+    price: 210000,
+    description: 'Monitor LG UltraWide de 29 pulgadas, resolución 2560x1080, panel IPS y entrada HDMI. Muy cómodo para trabajar con varias ventanas o editar contenido.',
+    region: 'Región Metropolitana',
+    comuna: 'Santiago',
+    images: [
+      'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-503',
+    sellerName: 'Matías Rojas',
+    sellerAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Usado'
+  },
+  {
+    id: 8,
+    title: 'Set de comedor nórdico 4 sillas',
+    price: 260000,
+    description: 'Mesa redonda de estilo nórdico con cuatro sillas tapizadas. Buen estado general, firme y lista para uso diario en departamento o comedor pequeño.',
+    region: 'Región de Valparaíso',
+    comuna: 'Valparaíso',
+    images: [
+      'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-504',
+    sellerName: 'Fernanda López',
+    sellerAvatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 18).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Usado'
+  },
+  {
+    id: 9,
+    title: 'Audífonos Sony WH-1000XM4',
+    price: 190000,
+    description: 'Audífonos inalámbricos con cancelación de ruido activa. Incluye estuche, cable de carga y cable auxiliar. Batería en excelente estado.',
+    region: 'Región de Coquimbo',
+    comuna: 'La Serena',
+    images: [
+      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-505',
+    sellerName: 'Ignacia Pizarro',
+    sellerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 30).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Usado'
+  },
+  {
+    id: 10,
+    title: 'Notebook Lenovo IdeaPad Ryzen 5',
+    price: 450000,
+    description: 'Notebook Lenovo IdeaPad con procesador Ryzen 5, 16GB RAM y SSD de 512GB. Equipo rápido para estudios, oficina y navegación intensiva.',
+    region: 'Región de Ñuble',
+    comuna: 'Chillán',
+    images: [
+      'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-506',
+    sellerName: 'Tomás Herrera',
+    sellerAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 36).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Nuevo'
+  },
+  {
+    id: 11,
+    title: 'Coche bebé compacto plegable',
+    price: 115000,
+    description: 'Coche de bebé liviano, plegable y fácil de transportar. Incluye capota, canasto inferior y freno trasero. Tapiz limpio y sin roturas.',
+    region: 'Región del Biobío',
+    comuna: 'Concepción',
+    images: [
+      'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-507',
+    sellerName: 'Daniela Fuentes',
+    sellerAvatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 42).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Usado'
+  },
+  {
+    id: 12,
+    title: 'Parlante JBL Charge 5 azul',
+    price: 125000,
+    description: 'Parlante Bluetooth resistente al agua, sonido potente y batería de larga duración. Se entrega con cable USB-C y caja original.',
+    region: 'Región de la Araucanía',
+    comuna: 'Temuco',
+    images: [
+      'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-508',
+    sellerName: 'Sebastián Vidal',
+    sellerAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 50).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Nuevo'
+  },
+  {
+    id: 13,
+    title: 'Mochila The North Face Borealis',
+    price: 68000,
+    description: 'Mochila urbana de 28 litros con compartimento para notebook, bolsillos laterales y espalda acolchada. Perfecta para universidad o trabajo.',
+    region: 'Región de Los Ríos',
+    comuna: 'Valdivia',
+    images: [
+      'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-509',
+    sellerName: 'Antonia Salgado',
+    sellerAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 60).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Usado'
+  },
+  {
+    id: 14,
+    title: 'Aspiradora robot Xiaomi Mi Robot',
+    price: 175000,
+    description: 'Aspiradora robot Xiaomi con mapeo inteligente, app móvil y base de carga. Funciona correctamente y se entrega con repuestos de filtro.',
+    region: 'Región de Los Lagos',
+    comuna: 'Puerto Montt',
+    images: [
+      'https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-510',
+    sellerName: 'Javiera Contreras',
+    sellerAvatar: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 68).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Usado'
+  },
+  {
+    id: 15,
+    title: 'Patines Rollerblade Zetrablade talla 42',
+    price: 95000,
+    description: 'Patines recreativos Rollerblade talla 42, ruedas en buen estado y botín cómodo. Ideales para retomar actividad física al aire libre.',
+    region: 'Región de Tarapacá',
+    comuna: 'Iquique',
+    images: [
+      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&q=80&w=800'
+    ],
+    sellerId: 'user-511',
+    sellerName: 'Cristóbal Medina',
+    sellerAvatar: 'https://images.unsplash.com/photo-1530268729831-4b0b9e170218?auto=format&fit=crop&q=80&w=200',
+    createdAt: new Date(Date.now() - 3600000 * 80).toISOString(),
+    status: 'PUBLISHED',
+    condition: 'Usado'
   }
 ];
 
+function hydrateInitialPosts() {
+  const storedPosts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
+  const hydratedPosts = [...storedPosts];
+
+  INITIAL_POSTS.forEach((seedPost) => {
+    const alreadyExists = hydratedPosts.some(post => post.title === seedPost.title && post.sellerId === seedPost.sellerId);
+
+    if (alreadyExists) return;
+
+    const idInUse = hydratedPosts.some(post => post.id === seedPost.id);
+    const nextId = hydratedPosts.length > 0 ? Math.max(...hydratedPosts.map(post => Number(post.id) || 0)) + 1 : seedPost.id;
+
+    hydratedPosts.push({
+      ...seedPost,
+      id: idInUse ? nextId : seedPost.id
+    });
+  });
+
+  localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(hydratedPosts));
+}
+
 if (!localStorage.getItem(STORAGE_KEYS.POSTS)) {
   localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(INITIAL_POSTS));
+} else {
+  hydrateInitialPosts();
 }
 
 function getPostsFromStorage() {
@@ -102,6 +295,14 @@ function getPostsFromStorage() {
 
 function savePostsToStorage(posts) {
   localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(posts));
+}
+
+function getDraftsFromStorage() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.DRAFTS) || '[]');
+}
+
+function saveDraftsToStorage(drafts) {
+  localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(drafts));
 }
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -151,6 +352,10 @@ export async function mockGetPosts(filters = {}) {
       if (post.condition !== filters.condition) return false;
     }
 
+    if (filters.sellerId) {
+      if (post.sellerId !== filters.sellerId) return false;
+    }
+
     return true;
   });
 }
@@ -198,6 +403,74 @@ export async function mockCreatePost(postData, currentUser) {
   savePostsToStorage(posts);
 
   return newPost;
+}
+
+export async function mockCreateDraft(currentUser) {
+  if (!currentUser) {
+    throw new Error('Debe iniciar sesión para crear un borrador');
+  }
+
+  await delay(500);
+
+  const drafts = getDraftsFromStorage();
+
+  if (drafts.length >= FREE_ACCOUNT_LIMITS.MAX_DRAFTS) {
+    throw new Error(`La cuenta gratuita permite hasta ${FREE_ACCOUNT_LIMITS.MAX_DRAFTS} borradores. Elimina uno antes de crear otra publicación.`);
+  }
+
+  const newDraft = {
+    id: `draft-${Math.random().toString(36).substring(2, 9)}`,
+    title: '',
+    price: 0,
+    description: '',
+    region: '',
+    comuna: '',
+    images: [],
+    status: 'DRAFT',
+    sellerId: currentUser.id,
+    createdAt: new Date().toISOString()
+  };
+
+  saveDraftsToStorage([newDraft, ...drafts]);
+
+  return newDraft;
+}
+
+export async function mockUpdatePost(id, postData, currentUser) {
+  postSchema.parse(postData);
+
+  if (!currentUser) {
+    throw new Error('Debe iniciar sesión para editar una publicación');
+  }
+
+  await delay(600);
+
+  const posts = getPostsFromStorage();
+  const index = posts.findIndex(post => post.id === Number(id));
+
+  if (index === -1) {
+    throw new Error('Publicación no encontrada');
+  }
+
+  if (posts[index].sellerId !== currentUser.id) {
+    throw new Error('No tienes permisos para editar esta publicación');
+  }
+
+  posts[index] = {
+    ...posts[index],
+    title: postData.title,
+    price: Number(postData.price),
+    description: postData.description,
+    region: postData.region,
+    comuna: postData.comuna,
+    images: postData.images,
+    condition: postData.condition || posts[index].condition || 'Nuevo',
+    updatedAt: new Date().toISOString()
+  };
+
+  savePostsToStorage(posts);
+
+  return posts[index];
 }
 
 export async function mockGetPostsBySeller(sellerId) {

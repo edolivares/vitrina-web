@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
-import { AlertCircle, Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { sileo } from 'sileo';
 import { useUser } from '@/context/UserContext';
 import { loginSchema } from '@/schemas/auth.schema';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,6 @@ export function Login() {
   const [password, setPassword] = useState('password123');
 
   const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const from = location.state?.from?.pathname || searchParams.get('redirect') || '/';
@@ -26,7 +26,6 @@ export function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-    setApiError(null);
     setSubmitting(true);
 
     try {
@@ -44,8 +43,10 @@ export function Login() {
         });
         setErrors(fieldErrors);
       } else {
-
-        setApiError(err.message || 'Error de conexión');
+        sileo.error({
+          title: 'No se pudo iniciar sesión',
+          description: err.message || 'Error de conexión'
+        });
       }
     } finally {
       setSubmitting(false);
@@ -72,17 +73,6 @@ export function Login() {
             Digita tus credenciales para acceder a tu perfil
           </CardDescription>
         </CardHeader>
-
-        {}
-        {apiError && (
-          <div className="flex gap-2.5 items-start bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs animate-shake">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <span className="font-semibold">No se pudo iniciar sesión</span>
-              <span>{apiError}</span>
-            </div>
-          </div>
-        )}
 
         {}
         <CardContent className="p-0">

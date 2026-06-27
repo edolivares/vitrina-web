@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { AlertCircle, Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { sileo } from 'sileo';
 import { useUser } from '@/context/UserContext';
 import { registerSchema } from '@/schemas/auth.schema';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,6 @@ export function Register() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
 
   const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const redirectPath = searchParams.get('redirect') || '/';
@@ -27,7 +27,6 @@ export function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-    setApiError(null);
     setSubmitting(true);
 
     try {
@@ -45,7 +44,10 @@ export function Register() {
         });
         setErrors(fieldErrors);
       } else {
-        setApiError(err.message || 'Error en el servidor');
+        sileo.error({
+          title: 'No se pudo crear la cuenta',
+          description: err.message || 'Error en el servidor'
+        });
       }
     } finally {
       setSubmitting(false);
@@ -72,17 +74,6 @@ export function Register() {
             Regístrate en Vitrina para publicar y guardar favoritos
           </CardDescription>
         </CardHeader>
-
-        {}
-        {apiError && (
-          <div className="flex gap-2.5 items-start bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <span className="font-semibold">No se pudo crear la cuenta</span>
-              <span>{apiError}</span>
-            </div>
-          </div>
-        )}
 
         {}
         <CardContent className="p-0">

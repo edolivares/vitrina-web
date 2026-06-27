@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@/context/UserContext';
 import { mockGetPostsBySeller, mockUpdatePostStatus, mockGetPostById } from '@/api/posts';
-import { Eye, Edit, Trash2, AlertCircle, Heart, FolderHeart, FileText, MessageSquare, TrendingUp, Archive, Calendar, Star, Upload } from 'lucide-react';
+import { Eye, Edit, Trash2, AlertCircle, Heart, FolderHeart, FileText, MessageSquare, TrendingUp, Archive, Calendar, Star, Upload, Plus, Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { STORAGE_KEYS } from '@/config/constants';
+import { FREE_ACCOUNT_LIMITS, STORAGE_KEYS } from '@/config/constants';
+import { ConfirmAction } from '@/components/ConfirmAction';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const INITIAL_DRAFTS = [
   {
@@ -26,10 +29,34 @@ if (!localStorage.getItem(STORAGE_KEYS.DRAFTS)) {
   localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(INITIAL_DRAFTS));
 }
 
+function ProfileCardsSkeleton({ count = 5 }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={index} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+          <Skeleton className="aspect-video rounded-none bg-slate-800" />
+          <div className="flex flex-col gap-3 p-4">
+            <Skeleton className="h-4 w-4/5 bg-slate-800" />
+            <Skeleton className="h-4 w-1/2 bg-slate-800" />
+            <Skeleton className="h-3 w-2/3 bg-slate-800" />
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-800/60 pt-3">
+              <Skeleton className="h-9 flex-1 rounded-lg bg-slate-800" />
+              <Skeleton className="size-9 rounded-lg bg-slate-800" />
+              <Skeleton className="size-9 rounded-lg bg-slate-800" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Profile() {
   const { user, favorites, toggleFavorite, updateUser } = useUser();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('posts');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = ['posts', 'drafts', 'favorites'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'posts';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const [userPosts, setUserPosts] = useState([]);
   const [drafts, setDrafts] = useState([]);
@@ -39,6 +66,11 @@ export function Profile() {
 
   // Estados para diálogo de avatar
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [metricsPost, setMetricsPost] = useState(null);
+  const [profileName, setProfileName] = useState(user?.name || '');
+  const [profileEmail, setProfileEmail] = useState(user?.email || '');
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isDragActive, setIsDragActive] = useState(false);
 
@@ -51,7 +83,16 @@ export function Profile() {
       setUserPosts(posts);
 
       const savedDrafts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DRAFTS) || '[]');
-      setDrafts(savedDrafts);
+      const postSignatures = new Set(posts.map(post => `${post.title}|${post.price}|${post.images?.[0] || ''}`));
+      const realDrafts = savedDrafts.filter((draft) => {
+        const draftSignature = `${draft.title}|${draft.price}|${draft.images?.[0] || ''}`;
+
+        return !draft.id?.startsWith('edit-') && !draft.sourcePostId && !postSignatures.has(draftSignature);
+      });
+      if (realDrafts.length !== savedDrafts.length) {
+        localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(realDrafts));
+      }
+      setDrafts(realDrafts);
 
       const favoriteDetails = [];
       for (const favId of favorites) {
@@ -77,6 +118,11 @@ export function Profile() {
     });
   }, [loadProfileData, activeTab]);
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSearchParams(tab === 'posts' ? {} : { tab });
+  };
+
   const handleUpdateStatus = async (postId, newStatus) => {
     try {
       await mockUpdatePostStatus(postId, newStatus);
@@ -95,12 +141,13 @@ export function Profile() {
     const updatedDrafts = drafts.filter(d => d.id !== draftId);
     localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(updatedDrafts));
     setDrafts(updatedDrafts);
+    sileo.success({
+      title: "Borrador eliminado",
+      description: "El borrador se eliminó de esta maqueta local."
+    });
   };
 
   const handleDeletePost = (postId) => {
-    const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar esta publicación?');
-    if (!confirmDelete) return;
-
     try {
       const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
       const updatedPosts = posts.filter(p => p.id !== Number(postId));
@@ -114,6 +161,10 @@ export function Profile() {
       console.error('Error al eliminar la publicación:', error);
       sileo.error({ title: "Error", description: "No se pudo eliminar la publicación." });
     }
+  };
+
+  const handleEditPost = (post) => {
+    navigate(`/publicar?postId=${post.id}`);
   };
 
   // Manejadores de Drag and Drop para el Avatar
@@ -166,6 +217,25 @@ export function Profile() {
         description: "Tu foto de perfil se ha guardado correctamente."
       });
     }
+  };
+
+  const handleOpenEditProfile = () => {
+    setProfileName(user.name);
+    setProfileEmail(user.email);
+    setIsEditProfileDialogOpen(true);
+  };
+
+  const handleSaveProfile = () => {
+    setIsSavingProfile(true);
+    updateUser({ name: profileName, email: profileEmail });
+    sileo.success({
+      title: "Perfil actualizado",
+      description: "Los datos se guardaron en la maqueta local."
+    });
+    setTimeout(() => {
+      setIsSavingProfile(false);
+      setIsEditProfileDialogOpen(false);
+    }, 900);
   };
 
   const formatPrice = (value) => {
@@ -230,7 +300,7 @@ export function Profile() {
         </div>
         <div className="shrink-0 w-full md:w-auto">
           <button
-            onClick={() => sileo.info({ title: "Módulo en desarrollo", description: "Componente o elemento en desarrollo." })}
+            onClick={handleOpenEditProfile}
             className="w-full md:w-auto px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-200 hover:text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 hover:border-slate-700 active:scale-98 cursor-pointer"
           >
             <Edit className="w-4 h-4" />
@@ -240,31 +310,44 @@ export function Profile() {
       </div>
 
       {}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col gap-6">
-        <TabsList className="bg-slate-900 border border-slate-800/80 p-1.5 rounded-2xl flex gap-2 w-full max-w-xl justify-start h-auto">
-          <TabsTrigger
-            value="posts"
-            className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col gap-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <TabsList className="bg-slate-900 border border-slate-800/80 p-1.5 rounded-2xl flex gap-2 w-full max-w-xl justify-start h-auto">
+            <TabsTrigger
+              value="posts"
+              className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
+            >
+              Mis Publicaciones ({userPosts.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="drafts"
+              className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
+            >
+              Mis Borradores ({drafts.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="favorites"
+              className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
+            >
+              Mis Favoritos ({favPosts.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <Link
+            to="/publicar"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/20 transition-colors hover:bg-indigo-500 lg:w-auto"
           >
-            Mis Publicaciones ({userPosts.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="drafts"
-            className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
-          >
-            Mis Borradores ({drafts.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="favorites"
-            className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-semibold rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 bg-transparent data-[state=active]:bg-indigo-600 data-[state=active]:text-white dark:data-[state=active]:bg-indigo-600 dark:data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-indigo-600/20 transition-all duration-200 border-none"
-          >
-            Mis Favoritos ({favPosts.length})
-          </TabsTrigger>
-        </TabsList>
+            <Plus className="w-4 h-4" />
+            Crear publicación
+          </Link>
+        </div>
 
         {}
         {loading ? (
-          <div className="py-20 text-center text-slate-500 text-xs">Cargando información del perfil...</div>
+          <div className="flex flex-col gap-4">
+            <span className="sr-only">Cargando información del perfil...</span>
+            <ProfileCardsSkeleton />
+          </div>
         ) : (
           <div className="flex flex-col gap-4">
 
@@ -323,7 +406,7 @@ export function Profile() {
 
                           {/* 2. Editar */}
                           <button
-                            onClick={() => sileo.info({ title: "Módulo en desarrollo", description: "Componente o elemento en desarrollo." })}
+                            onClick={() => handleEditPost(post)}
                             className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all duration-250"
                             title="Editar publicación"
                           >
@@ -332,29 +415,38 @@ export function Profile() {
 
                           {/* 3. Archivar / Activar */}
                           {post.status === 'PUBLISHED' ? (
-                            <button
-                              onClick={() => handleUpdateStatus(post.id, 'ARCHIVED')}
-                              className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 transition-all duration-250"
+                            <ConfirmAction
                               title="Archivar publicación"
+                              description="La publicación dejará de estar disponible para compradores, pero podrás restaurarla desde tu perfil."
+                              actionLabel="Archivar"
+                              onConfirm={() => handleUpdateStatus(post.id, 'ARCHIVED')}
                             >
-                              <Archive className="w-4 h-4" />
-                            </button>
+                              <button
+                                className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 transition-all duration-250"
+                                title="Archivar publicación"
+                              >
+                                <Archive className="w-4 h-4" />
+                              </button>
+                            </ConfirmAction>
                           ) : (
-                            <button
-                              onClick={() => handleUpdateStatus(post.id, 'PUBLISHED')}
-                              className="p-2 rounded-lg bg-slate-950 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-250"
-                              title="Publicar de nuevo"
+                            <ConfirmAction
+                              title="Restaurar publicación"
+                              description="La publicación volverá a quedar disponible para compradores en la galería."
+                              actionLabel="Restaurar"
+                              onConfirm={() => handleUpdateStatus(post.id, 'PUBLISHED')}
                             >
-                              <Archive className="w-4 h-4" />
-                            </button>
+                              <button
+                                className="p-2 rounded-lg bg-slate-950 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-250"
+                                title="Publicar de nuevo"
+                              >
+                                <Archive className="w-4 h-4" />
+                              </button>
+                            </ConfirmAction>
                           )}
 
                           {/* 4. Estadísticas */}
                           <button
-                            onClick={() => sileo.info({
-                              title: `Métricas de "${post.title}"`,
-                              description: `• Visitas: ${post.id * 153 + 45} | • Favoritos: ${post.id * 7 + 3} | • Chats: ${post.id * 2 + 1}`
-                            })}
+                            onClick={() => setMetricsPost(post)}
                             className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all duration-250"
                             title="Estadísticas"
                           >
@@ -362,13 +454,19 @@ export function Profile() {
                           </button>
 
                           {/* 5. Eliminar */}
-                          <button
-                            onClick={() => handleDeletePost(post.id)}
-                            className="p-2 rounded-lg bg-slate-950 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-250"
+                          <ConfirmAction
                             title="Eliminar publicación"
+                            description="Esta acción quitará la publicación de tu listado mock. Puedes volver a crearla desde el formulario de publicación."
+                            actionLabel="Eliminar"
+                            onConfirm={() => handleDeletePost(post.id)}
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            <button
+                              className="p-2 rounded-lg bg-slate-950 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-250"
+                              title="Eliminar publicación"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </ConfirmAction>
                         </div>
                       </div>
                     </div>
@@ -383,43 +481,69 @@ export function Profile() {
                 {}
                 <div className="flex items-center gap-2 bg-indigo-500/5 border border-indigo-500/20 text-indigo-300 p-3 rounded-xl text-xs">
                   <AlertCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                  <span>Borradores activos: <strong>{drafts.length} de 5</strong>. Los borradores te permiten guardar artículos incompletos para publicarlos después.</span>
+                  <span>Borradores activos: <strong>{drafts.length} de {FREE_ACCOUNT_LIMITS.MAX_DRAFTS}</strong>. Los borradores te permiten guardar artículos incompletos para publicarlos después.</span>
                 </div>
 
-                <div className="flex flex-col gap-3">
+                <div>
                   {drafts.length === 0 ? (
                     <div className="py-16 text-center border border-dashed border-slate-800/80 rounded-2xl text-slate-500 flex flex-col items-center justify-center gap-2">
                       <FileText className="w-8 h-8 text-slate-700" />
                       <span className="text-sm font-medium">No tienes borradores pendientes</span>
                     </div>
                   ) : (
-                    drafts.map(draft => (
-                      <div key={draft.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4">
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <span className="text-sm font-bold text-slate-200 truncate">{draft.title || 'Sin Título'}</span>
-                          <div className="flex items-center gap-3 text-xs text-slate-500">
-                            <span>Precio: {formatPrice(draft.price)}</span>
-                            <span>Comuna: {draft.comuna}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                      {drafts.map(draft => (
+                        <div key={draft.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700/80 hover:-translate-y-1 transition-all duration-300 flex flex-col relative">
+                          <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
+                            {draft.images?.[0] ? (
+                              <img src={draft.images[0]} alt={draft.title || 'Borrador sin título'} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-600">
+                                <FileText className="w-8 h-8" />
+                                <span className="text-[10px] font-semibold uppercase tracking-wider">Sin imagen</span>
+                              </div>
+                            )}
+
+                            <span className="absolute top-3 left-3 rounded bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-950 backdrop-blur-sm">
+                              Borrador
+                            </span>
+                          </div>
+
+                          <div className="p-4 flex-1 flex flex-col justify-between">
+                            <div className="flex flex-col gap-1">
+                              <h3 className="text-sm font-bold text-slate-200 truncate">{draft.title || 'Sin título'}</h3>
+                              <span className="text-sm font-semibold text-indigo-400">{formatPrice(draft.price || 0)}</span>
+                              <span className="text-[10px] text-slate-500">
+                                {draft.comuna ? `Ubicación: ${draft.comuna}` : 'Ubicación pendiente'}
+                              </span>
+                            </div>
+
+                            <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between gap-2">
+                              <button
+                                onClick={() => navigate(`/publicar?draftId=${draft.id}`)}
+                                className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                Continuar
+                              </button>
+                              <ConfirmAction
+                                title="Eliminar borrador"
+                                description="El borrador se eliminará de esta maqueta local y liberará uno de los 5 cupos disponibles."
+                                actionLabel="Eliminar"
+                                onConfirm={() => handleDeleteDraft(draft.id)}
+                              >
+                                <button
+                                  className="p-2 rounded-lg bg-slate-950 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                  title="Eliminar borrador"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </ConfirmAction>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => navigate(`/publicar?draftId=${draft.id}`)}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                            Continuar
-                          </button>
-                          <button
-                            onClick={() => handleDeleteDraft(draft.id)}
-                            className="p-2 rounded-lg bg-slate-950 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                            title="Eliminar borrador"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -440,15 +564,19 @@ export function Profile() {
                       <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
                         <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
                         
-                        {/* Estado Badge (Top Left) */}
+                        {/* Disponibilidad para el comprador */}
                         <span className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm tracking-wider uppercase border-none ${
                           post.status === 'PUBLISHED'
-                            ? 'bg-indigo-600/90'
+                            ? 'bg-emerald-600/90'
                             : post.status === 'SOLD'
                             ? 'bg-blue-600/90'
                             : 'bg-slate-800/90 text-slate-300'
                         }`}>
-                          {post.status === 'PUBLISHED' ? 'Publicada' : post.status === 'SOLD' ? 'Vendida' : 'Archivada'}
+                          {post.status === 'PUBLISHED' ? 'Disponible' : post.status === 'SOLD' ? 'Vendido' : 'No disponible'}
+                        </span>
+
+                        <span className="absolute top-3 right-3 rounded bg-slate-950/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-200 backdrop-blur-sm">
+                          {post.condition || 'Usado'}
                         </span>
                       </div>
 
@@ -457,7 +585,7 @@ export function Profile() {
                         <div className="flex flex-col gap-1">
                           <h3 className="text-sm font-bold text-slate-200 truncate">{post.title}</h3>
                           <span className="text-sm font-semibold text-indigo-400">{formatPrice(post.price)}</span>
-                          <span className="text-[10px] text-slate-500">Ubicación: {post.comuna}</span>
+                          <span className="text-[10px] text-slate-500">Ubicación: {post.comuna} · Condición: {post.condition || 'Usado'}</span>
                         </div>
 
                         {/* Botones de accion */}
@@ -488,6 +616,88 @@ export function Profile() {
           </div>
         )}
       </Tabs>
+
+      <Dialog open={isEditProfileDialogOpen} onOpenChange={(open) => !isSavingProfile && setIsEditProfileDialogOpen(open)}>
+        <DialogContent className="max-w-md overflow-hidden bg-slate-900 border border-slate-800 text-slate-200 p-6 rounded-2xl shadow-xl">
+          {isSavingProfile && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-slate-950/55 text-slate-100 backdrop-blur-sm">
+              <Loader2 className="size-6 animate-spin text-indigo-300" />
+              <span className="text-sm font-semibold">Guardando perfil...</span>
+            </div>
+          )}
+
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-100">Editar Perfil</DialogTitle>
+            <DialogDescription className="text-sm text-slate-400 mt-1">
+              Actualiza los datos visibles de tu cuenta en esta maqueta local.
+            </DialogDescription>
+          </DialogHeader>
+
+          <fieldset disabled={isSavingProfile} className="flex flex-col gap-4 py-4 disabled:opacity-75">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-slate-400">Nombre</label>
+              <Input
+                value={profileName}
+                onChange={(event) => setProfileName(event.target.value)}
+                className="rounded-xl border-slate-800 bg-slate-950 text-slate-200 focus-visible:border-indigo-500 focus-visible:ring-0"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-slate-400">Correo electrónico</label>
+              <Input
+                value={profileEmail}
+                onChange={(event) => setProfileEmail(event.target.value)}
+                className="rounded-xl border-slate-800 bg-slate-950 text-slate-200 focus-visible:border-indigo-500 focus-visible:ring-0"
+              />
+            </div>
+          </fieldset>
+
+          <DialogFooter className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => setIsEditProfileDialogOpen(false)}
+              disabled={isSavingProfile}
+              className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSaveProfile}
+              disabled={isSavingProfile}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all shadow-md bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20 active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSavingProfile ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(metricsPost)} onOpenChange={(open) => !open && setMetricsPost(null)}>
+        <DialogContent className="max-w-md bg-slate-900 border border-slate-800 text-slate-200 p-6 rounded-2xl shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-100">Métricas de publicación</DialogTitle>
+            <DialogDescription className="text-sm text-slate-400 mt-1">
+              Datos simulados para presentar el flujo de dashboard del vendedor.
+            </DialogDescription>
+          </DialogHeader>
+
+          {metricsPost && (
+            <div className="grid grid-cols-3 gap-3 py-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
+                <span className="block text-lg font-bold text-slate-100">{metricsPost.id * 153 + 45}</span>
+                <span className="text-[10px] text-slate-500">Visitas</span>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
+                <span className="block text-lg font-bold text-slate-100">{metricsPost.id * 7 + 3}</span>
+                <span className="text-[10px] text-slate-500">Favoritos</span>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-center">
+                <span className="block text-lg font-bold text-slate-100">{metricsPost.id * 2 + 1}</span>
+                <span className="text-[10px] text-slate-500">Chats</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Diálogo de Cambio de Imagen */}
       <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>

@@ -1,17 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Search, MapPin, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Filter, MapPin, Plus, Search } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Slider } from '@/components/ui/slider';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 const REGIONS = [
   'Región Metropolitana',
@@ -21,7 +19,7 @@ const REGIONS = [
   'Región de Tarapacá',
   'Región de Antofagasta',
   'Región de Atacama',
-  'Región de O\'Higgins',
+  'Región de O Higgins',
   'Región del Maule',
   'Región de Ñuble',
   'Región del Biobío',
@@ -32,7 +30,7 @@ const REGIONS = [
   'Región de Magallanes y de la Antártica Chilena'
 ];
 
-export function Sidebar() {
+function FilterControls() {
   const { user } = useUser();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -69,89 +67,65 @@ export function Sidebar() {
     setSearchParams(params);
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
     applyFilters({ search });
   };
 
-  const handleRegionChange = (val) => {
-    const selectedRegion = val === 'all' ? '' : val;
-    setRegion(selectedRegion);
-    applyFilters({ region: selectedRegion });
-  };
-
-  const handleConditionChange = (val) => {
-    const newCondition = condition === val ? '' : val;
-    setCondition(newCondition);
-    applyFilters({ condition: newCondition });
-  };
-
-  const handleRadiusChange = (val) => {
-    setRadius(val[0]);
-  };
-
-  const handleRadiusCommit = (val) => {
-    applyFilters({ radius: val[0] });
-  };
-
   const handleCreatePostClick = () => {
-    if (!user) {
-      navigate('/login?redirect=/publicar');
-    } else {
-      navigate('/publicar');
-    }
+    navigate(user ? '/publicar' : '/login?redirect=/publicar');
   };
 
   return (
-    <aside className="w-full lg:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-900 p-6 flex flex-col gap-6 select-none lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
-
-      {/* Title */}
+    <div className="flex min-h-full flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-bold text-slate-100 font-sans tracking-tight">Filtros de búsqueda</h2>
+        <h2 className="text-xl font-bold tracking-tight text-slate-100">Filtros de búsqueda</h2>
         <span className="text-xs text-slate-500">Filtrar resultados</span>
       </div>
 
-      {/* Búsqueda */}
       <form onSubmit={handleSearchSubmit} className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-slate-400">Búsqueda</label>
         <div className="relative flex items-center">
-          <Search className="absolute left-3.5 w-4 h-4 text-slate-500 pointer-events-none" />
+          <Search className="absolute left-3.5 size-4 text-slate-500 pointer-events-none" />
           <Input
             type="text"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              applyFilters({ search: e.target.value });
+            onChange={(event) => {
+              setSearch(event.target.value);
+              applyFilters({ search: event.target.value });
             }}
             placeholder="¿Qué estás buscando?"
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl h-11 pl-10 pr-4 text-sm text-slate-200 placeholder-slate-500 focus-visible:border-indigo-500 focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors"
+            className="w-full rounded-xl border-slate-700/80 bg-slate-900/70 pl-10 text-slate-100 placeholder-slate-500 focus-visible:border-indigo-400 focus-visible:ring-0"
           />
         </div>
       </form>
 
-      {/* Ubicación */}
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-slate-400">Ubicación</label>
-        <Select value={region || 'all'} onValueChange={handleRegionChange}>
-          <SelectTrigger className="w-full bg-slate-950 border-slate-800 rounded-xl h-11 px-3.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer justify-between">
+        <Select
+          value={region || 'all'}
+          onValueChange={(value) => {
+            const selectedRegion = value === 'all' ? '' : value;
+            setRegion(selectedRegion);
+            applyFilters({ region: selectedRegion });
+          }}
+        >
+          <SelectTrigger className="w-full rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-100 focus:border-indigo-400">
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-slate-500" />
+              <MapPin className="size-4 text-slate-500" />
               <SelectValue placeholder="Todo Chile" />
             </div>
           </SelectTrigger>
-          <SelectContent className="bg-slate-950 border border-slate-800 text-slate-200">
+          <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
             <SelectItem value="all">Todo Chile</SelectItem>
-            {REGIONS.map((reg) => (
-              <SelectItem key={reg} value={reg}>
-                {reg}
-              </SelectItem>
+            {REGIONS.map((item) => (
+              <SelectItem key={item} value={item}>{item}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {/* Radio de búsqueda Slider */}
-        <div className="flex flex-col gap-3 mt-2">
-          <div className="flex justify-between items-center text-xs">
+        <div className="mt-2 flex flex-col gap-3">
+          <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Radio de búsqueda</span>
             <span className="font-medium text-indigo-400">{radius} km</span>
           </div>
@@ -160,88 +134,104 @@ export function Sidebar() {
             max={500}
             step={10}
             value={[radius]}
-            onValueChange={handleRadiusChange}
-            onValueCommit={handleRadiusCommit}
-            className="w-full cursor-pointer py-2 [&_[data-slot=slider-track]]:bg-slate-800 [&_[data-slot=slider-range]]:bg-indigo-500 [&_[data-slot=slider-thumb]]:bg-indigo-400 [&_[data-slot=slider-thumb]]:border-indigo-500"
+            onValueChange={(value) => setRadius(value[0])}
+            onValueCommit={(value) => applyFilters({ radius: value[0] })}
+            className="w-full cursor-pointer py-2 [&_[data-slot=slider-range]]:bg-indigo-400 [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:border-indigo-200 [&_[data-slot=slider-thumb]]:bg-indigo-500 [&_[data-slot=slider-thumb]]:shadow-[0_0_0_4px_rgba(129,140,248,0.18)] [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-slate-700"
           />
         </div>
       </div>
 
-      {/* Rango de precio */}
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-slate-400">Rango de precio</label>
         <div className="flex gap-2">
           <Input
             type="number"
             value={minPrice}
-            onChange={(e) => {
-              setMinPrice(e.target.value);
-              applyFilters({ minPrice: e.target.value });
+            onChange={(event) => {
+              setMinPrice(event.target.value);
+              applyFilters({ minPrice: event.target.value });
             }}
             placeholder="Mínimo"
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl h-11 px-3.5 text-sm text-slate-200 placeholder-slate-600 focus-visible:border-indigo-500 focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors"
+            className="rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-100 placeholder-slate-500 focus-visible:border-indigo-400 focus-visible:ring-0"
           />
           <Input
             type="number"
             value={maxPrice}
-            onChange={(e) => {
-              setMaxPrice(e.target.value);
-              applyFilters({ maxPrice: e.target.value });
+            onChange={(event) => {
+              setMaxPrice(event.target.value);
+              applyFilters({ maxPrice: event.target.value });
             }}
             placeholder="Máximo"
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl h-11 px-3.5 text-sm text-slate-200 placeholder-slate-600 focus-visible:border-indigo-500 focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors"
+            className="rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-100 placeholder-slate-500 focus-visible:border-indigo-400 focus-visible:ring-0"
           />
         </div>
       </div>
 
-      {/* Estado (Condition) */}
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-slate-400">Estado</label>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleConditionChange('Nuevo')}
-            className={`flex-1 h-11 rounded-xl text-sm transition-all border ${condition === 'Nuevo'
-                ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-400 font-semibold'
-                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-              }`}
-          >
+        <ToggleGroup
+          type="single"
+          value={condition}
+          onValueChange={(value) => {
+            setCondition(value || '');
+            applyFilters({ condition: value || '' });
+          }}
+          className="grid w-full grid-cols-2 gap-2"
+        >
+          <ToggleGroupItem value="Nuevo" className="h-11 rounded-xl border border-slate-700/80 bg-slate-900/70 text-slate-300 data-[state=on]:border-indigo-400/60 data-[state=on]:bg-indigo-500/15 data-[state=on]:text-indigo-200">
             Nuevo
-          </button>
-          <button
-            type="button"
-            onClick={() => handleConditionChange('Usado')}
-            className={`flex-1 h-11 rounded-xl text-sm transition-all border ${condition === 'Usado'
-                ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-400 font-semibold'
-                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-              }`}
-          >
+          </ToggleGroupItem>
+          <ToggleGroupItem value="Usado" className="h-11 rounded-xl border border-slate-700/80 bg-slate-900/70 text-slate-300 data-[state=on]:border-indigo-400/60 data-[state=on]:bg-indigo-500/15 data-[state=on]:text-indigo-200">
             Usado
-          </button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-slate-800/60 mt-2" />
+      <Separator className="my-1 h-px bg-slate-700/90" />
 
-      {/* Crear Publicación Button */}
-      <Button
-        onClick={handleCreatePostClick}
-        className="w-full py-5 rounded-xl font-bold bg-indigo-200 hover:bg-indigo-300 text-indigo-950 flex items-center justify-center gap-2 transition-all border-none"
-        size="lg"
-      >
-        <Plus className="w-5 h-5" />
+      <Button onClick={handleCreatePostClick} className="w-full rounded-xl bg-indigo-200 py-5 font-bold text-indigo-950 hover:bg-indigo-300" size="lg">
+        <Plus data-icon="inline-start" />
         Crear publicación
       </Button>
 
-      {/* Información Legal Footer */}
-      <div className="mt-auto p-4 bg-slate-900/30 border border-slate-800/80 rounded-2xl flex flex-col gap-2.5">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Información legal</span>
-        <Link to="#" className="text-[11px] text-slate-400 hover:text-indigo-400 transition-colors">Términos de servicio</Link>
-        <Link to="#" className="text-[11px] text-slate-400 hover:text-indigo-400 transition-colors">Privacidad</Link>
-        <Link to="#" className="text-[11px] text-slate-400 hover:text-indigo-400 transition-colors">Soporte</Link>
+      <div className="mt-auto flex flex-col gap-2.5 rounded-2xl border border-slate-800/80 bg-slate-900/30 p-4">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Información legal</span>
+        <Link to="#" className="text-[11px] text-slate-400 transition-colors hover:text-indigo-400">Términos de servicio</Link>
+        <Link to="#" className="text-[11px] text-slate-400 transition-colors hover:text-indigo-400">Privacidad</Link>
+        <Link to="#" className="text-[11px] text-slate-400 transition-colors hover:text-indigo-400">Soporte</Link>
+      </div>
+    </div>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <>
+      <div className="w-full border-b border-slate-800 bg-slate-900 p-4 lg:hidden">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="w-full justify-center rounded-xl border-slate-800 bg-slate-950 text-slate-200">
+              <Filter data-icon="inline-start" />
+              Abrir filtros
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="border-slate-800 bg-slate-900 p-0 text-slate-200">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Filtros de búsqueda</SheetTitle>
+              <SheetDescription>Panel de filtros para la galería de publicaciones.</SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="h-full">
+              <div className="p-6">
+                <FilterControls />
+              </div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
       </div>
 
-    </aside>
+      <aside className="hidden w-80 flex-shrink-0 select-none border-r border-slate-800 bg-slate-900 p-6 lg:sticky lg:top-16 lg:flex lg:h-[calc(100vh-4rem)] lg:flex-col lg:overflow-y-auto">
+        <FilterControls />
+      </aside>
+    </>
   );
 }

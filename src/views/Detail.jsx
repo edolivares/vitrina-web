@@ -6,6 +6,7 @@ import { mockGetPostById } from '@/api/posts';
 import { mockCreateChat } from '@/api/messages';
 import { useUser } from '@/context/UserContext';
 import { Button } from '@/components/ui/button';
+import { sileo } from 'sileo';
 
 export function Detail() {
   const { id } = useParams();
@@ -76,7 +77,10 @@ export function Detail() {
 
       navigate(`/mensajes?chatId=${chat.id}`);
     } catch (error) {
-      alert(error.message || 'Error al iniciar chat');
+      sileo.error({
+        title: 'No se pudo iniciar el chat',
+        description: error.message || 'Intenta nuevamente en unos segundos.'
+      });
     } finally {
       setChatLoading(false);
     }
