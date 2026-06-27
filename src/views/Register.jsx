@@ -62,7 +62,6 @@ export function Register() {
       </Helmet>
       <Card className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl flex flex-col gap-6">
 
-        {}
         <CardHeader className="text-center flex flex-col gap-1.5 p-0 border-none bg-transparent">
           <div className="mx-auto p-3 rounded-xl bg-indigo-500/10 text-indigo-400 w-fit mb-2">
             <UserPlus className="w-6 h-6" />
@@ -75,11 +74,9 @@ export function Register() {
           </CardDescription>
         </CardHeader>
 
-        {}
         <CardContent className="p-0">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-            {}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-400">
                 Nombre Completo
@@ -103,7 +100,6 @@ export function Register() {
               )}
             </div>
 
-            {}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-400">
                 Correo Electrónico
@@ -127,7 +123,6 @@ export function Register() {
               )}
             </div>
 
-            {}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-400">
                 Contraseña
@@ -151,7 +146,6 @@ export function Register() {
               )}
             </div>
 
-            {}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-400">
                 Confirmar Contraseña
@@ -175,7 +169,6 @@ export function Register() {
               )}
             </div>
 
-            {}
             <Button
               type="submit"
               disabled={submitting}
@@ -196,7 +189,6 @@ export function Register() {
 
         <div className="h-px bg-slate-800/60" />
 
-        {}
         <div className="text-center text-xs text-slate-400">
           ¿Ya tienes una cuenta?{' '}
           <Link

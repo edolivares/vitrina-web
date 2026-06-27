@@ -61,7 +61,6 @@ export function Login() {
       </Helmet>
       <Card className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl flex flex-col gap-6">
 
-        {}
         <CardHeader className="text-center flex flex-col gap-1.5 p-0 border-none bg-transparent">
           <div className="mx-auto p-3 rounded-xl bg-indigo-500/10 text-indigo-400 w-fit mb-2">
             <LogIn className="w-6 h-6" />
@@ -74,11 +73,9 @@ export function Login() {
           </CardDescription>
         </CardHeader>
 
-        {}
         <CardContent className="p-0">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-            {}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-400">
                 Correo Electrónico
@@ -102,7 +99,6 @@ export function Login() {
               )}
             </div>
 
-            {}
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center">
                 <label className="text-xs font-medium text-slate-400">
@@ -128,7 +124,6 @@ export function Login() {
               )}
             </div>
 
-            {}
             <Button
               type="submit"
               disabled={submitting}
@@ -149,7 +144,6 @@ export function Login() {
 
         <div className="h-px bg-slate-800/60" />
 
-        {}
         <div className="text-center text-xs text-slate-400">
           ¿No tienes una cuenta?{' '}
           <Link

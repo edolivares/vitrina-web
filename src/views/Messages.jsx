@@ -139,7 +139,6 @@ export function Messages() {
         <meta name="description" content="Conversa directamente con compradores y vendedores sobre tus artículos de manera privada y segura." />
       </Helmet>
 
-      {}
       <div className={`w-full md:w-80 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
         activeChatId ? 'hidden md:flex' : 'flex'
       }`}>
@@ -199,17 +198,14 @@ export function Messages() {
         )}
       </div>
 
-      {}
       <div className={`flex-1 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
         activeChatId ? 'flex' : 'hidden md:flex'
       }`}>
 
         {activeChatId && activeChat ? (
           <>
-            {}
             <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-900/40">
 
-              {}
               <button
                 onClick={() => navigate(activePostId ? `/mensajes/publicacion/${activePostId}` : '/mensajes')}
                 className="p-1.5 rounded-lg bg-slate-950 text-slate-400 hover:text-slate-200 md:hidden transition-colors"
@@ -217,7 +213,6 @@ export function Messages() {
                 <ArrowLeft className="w-4 h-4" />
               </button>
 
-              {}
               <div className="flex-1 min-w-0 flex items-center gap-3">
                 <img src={activeChat.postImage} alt={activeChat.postTitle} className="w-10 h-10 rounded-lg object-cover bg-slate-950 flex-shrink-0" />
                 <div className="flex flex-col min-w-0">
@@ -233,7 +228,6 @@ export function Messages() {
               </div>
             </div>
 
-            {}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
               {loadingMessages ? (
                 <div className="flex-1 flex justify-center items-center text-slate-500 text-xs">Cargando mensajes...</div>
@@ -266,7 +260,6 @@ export function Messages() {
               <div ref={messagesEndRef} />
             </div>
 
-            {}
             <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-800/80 bg-slate-900/20 flex gap-2">
               <input
                 type="text"

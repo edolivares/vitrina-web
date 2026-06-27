@@ -2,6 +2,10 @@
 
 Frontend del marketplace P2P Vitrina, desarrollado con React, Vite y Tailwind CSS para proyecto final Desafío Latam.
 
+## Demo
+
+Puedes ver la demo del proyecto en Vercel: [Vitrina - Demo en Vercel](https://vitrina-web-sigma.vercel.app/)
+
 Se usa pnpm 11 con workspace por seguridad. Nadie quiere más vulneraciones de npm.
 
 ## Simulación de Datos (Mock)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MapPin, Heart, MessageSquare, Eye, ArrowLeft, Loader2, Calendar } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { sileo } from 'sileo';
 import { formatPrice } from '@/lib/format';
 
+const PostImageGallery = lazy(() => import('@/components/marketplace/PostImageGallery'));
+
 export function Detail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -16,7 +18,6 @@ export function Detail() {
 
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeImage, setActiveImage] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
 
   useEffect(() => {
@@ -25,7 +26,6 @@ export function Detail() {
       try {
         const fetchedPost = await mockGetPostById(id);
         setPost(fetchedPost);
-        setActiveImage(fetchedPost.images[0] || '');
       } catch (error) {
         console.error('Error cargando publicación:', error);
       } finally {
@@ -99,50 +99,33 @@ export function Detail() {
         <meta name="description" content={post.description ? `${post.description.slice(0, 155)}...` : 'Detalle de la publicación en Vitrina.'} />
       </Helmet>
 
-      {}
       <Link to="/" className="text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center gap-1.5 w-fit transition-colors">
         <ArrowLeft className="w-4 h-4" />
         Volver a la galería
       </Link>
 
-      {}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        {}
         <div className="lg:col-span-7 flex flex-col gap-4">
-          {}
-          <div className="aspect-square bg-slate-950 rounded-2xl overflow-hidden border border-slate-800/80 relative">
-            <img
-              src={activeImage}
-              alt={post.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          {}
-          {post.images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {post.images.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setActiveImage(img)}
-                  className={`aspect-square w-16 bg-slate-950 rounded-xl overflow-hidden flex-shrink-0 border transition-all ${
-                    activeImage === img
-                      ? 'border-indigo-500 ring-2 ring-indigo-500/20'
-                      : 'border-slate-800/80 hover:border-slate-700'
-                  }`}
-                >
-                  <img src={img} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
-                </button>
-              ))}
+          {post.images.length > 1 ? (
+            <Suspense
+              fallback={
+                <div className="aspect-square overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950">
+                  <img src={post.images[0]} alt={post.title} className="h-full w-full object-cover" />
+                </div>
+              }
+            >
+              <PostImageGallery images={post.images} title={post.title} />
+            </Suspense>
+          ) : (
+            <div className="aspect-square overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950">
+              <img src={post.images[0]} alt={post.title} className="h-full w-full object-cover" />
             </div>
           )}
         </div>
 
-        {}
         <div className="lg:col-span-5 flex flex-col gap-6">
 
-          {}
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl font-extrabold text-slate-100 font-sans tracking-tight leading-tight">
               {post.title}
@@ -168,7 +151,6 @@ export function Detail() {
 
           <div className="h-px bg-slate-800/60" />
 
-          {}
           <div className="flex flex-col gap-2">
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Descripción del Artículo
@@ -180,9 +162,7 @@ export function Detail() {
 
           <div className="h-px bg-slate-800/60" />
 
-          {}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
-            {}
             <div className="flex items-center gap-3">
               <img
                 src={post.sellerAvatar}
@@ -197,9 +177,7 @@ export function Detail() {
               </div>
             </div>
 
-            {}
             <div className="flex flex-col gap-2">
-              {}
               <Button
                 onClick={handleContactSeller}
                 disabled={chatLoading || isOwner}
@@ -214,9 +192,7 @@ export function Detail() {
                 {isOwner ? 'Publicación Propia' : 'Contactar Vendedor'}
               </Button>
 
-              {}
               <div className="grid grid-cols-2 gap-2">
-                {}
                 <Button
                   asChild
                   variant="outline"
@@ -228,16 +204,14 @@ export function Detail() {
                   </Link>
                 </Button>
 
-                {}
                 <Button
                   onClick={() => toggleFavorite(post.id)}
                   disabled={!user || isOwner}
                   variant={isFav ? "destructive" : "outline"}
-                  className={`py-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] ${
-                    isFav
+                  className={`py-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] ${isFav
                       ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
                       : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 disabled:opacity-55 disabled:cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />
                   {isFav ? 'Guardado' : 'Favorito'}
@@ -246,13 +220,11 @@ export function Detail() {
             </div>
           </div>
 
-          {}
           <div className="flex flex-col gap-2">
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Ubicación aproximada
             </h3>
             <div className="h-32 bg-slate-950 border border-slate-800 rounded-2xl relative overflow-hidden flex items-center justify-center">
-              {}
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:16px_16px] opacity-30" />
 
               <div className="flex flex-col items-center gap-1.5 z-10 text-center px-4">
@@ -266,9 +238,7 @@ export function Detail() {
               </div>
             </div>
           </div>
-
         </div>
-
       </div>
     </div>
   );

@@ -39,7 +39,6 @@ export function Header({ showLogo = true }) {
         <div />
       )}
 
-      {}
       {user && (
         <nav className="flex items-center gap-2">
           <NavLink to="/" end className={navItemClass}>
@@ -62,7 +61,6 @@ export function Header({ showLogo = true }) {
         </nav>
       )}
 
-      {}
       <div className="flex items-center gap-4">
         {user ? (
           <div className="flex items-center gap-3">
