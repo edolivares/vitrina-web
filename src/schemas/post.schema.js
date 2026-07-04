@@ -10,8 +10,8 @@ export const postSchema = z.object({
   description: z.string()
     .min(10, 'La descripción debe tener al menos 10 caracteres')
     .max(2000, 'La descripción no puede superar los 2000 caracteres'),
-  region: z.string().min(1, 'Debe seleccionar una región'),
-  comuna: z.string().min(1, 'Debe seleccionar una comuna'),
+  regionId: z.string().min(1, 'Debe seleccionar una región'),
+  cityId: z.string().min(1, 'Debe seleccionar una comuna'),
   images: z.array(z.string().url('URL de imagen inválida'))
     .min(1, 'Debe subir al menos una imagen')
     .max(5, 'No puede subir más de 5 imágenes'),
@@ -20,7 +20,7 @@ export const postSchema = z.object({
 
 export const filterSchema = z.object({
   search: z.string().optional(),
-  region: z.string().optional(),
+  regionId: z.string().optional(),
   comuna: z.string().optional(),
   radius: z.number().min(0).max(500).default(200).optional(),
   minPrice: z.union([z.string(), z.number()]).optional(),
