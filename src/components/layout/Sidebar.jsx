@@ -10,25 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Slider } from '@/components/ui/slider';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-
-const REGIONS = [
-  'Región Metropolitana',
-  'Región de Coquimbo',
-  'Región de Valparaíso',
-  'Región de Arica y Parinacota',
-  'Región de Tarapacá',
-  'Región de Antofagasta',
-  'Región de Atacama',
-  'Región de O Higgins',
-  'Región del Maule',
-  'Región de Ñuble',
-  'Región del Biobío',
-  'Región de la Araucanía',
-  'Región de Los Ríos',
-  'Región de Los Lagos',
-  'Región de Aysén',
-  'Región de Magallanes y de la Antártica Chilena'
-];
+import { getRegions } from '@/api/locations';
 
 function FilterControls() {
   const { user } = useUser();
@@ -36,7 +18,9 @@ function FilterControls() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [region, setRegion] = useState(searchParams.get('region') || '');
+  const [regionId, setRegionId] = useState(searchParams.get('regionId') || '');
+  const [regions, setRegions] = useState([]);
+  const [loadingRegions, setLoadingRegions] = useState(true);
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
   const [condition, setCondition] = useState(searchParams.get('condition') || '');
@@ -45,13 +29,36 @@ function FilterControls() {
   useEffect(() => {
     Promise.resolve().then(() => {
       setSearch(searchParams.get('search') || '');
-      setRegion(searchParams.get('region') || '');
+      setRegionId(searchParams.get('regionId') || '');
       setMinPrice(searchParams.get('minPrice') || '');
       setMaxPrice(searchParams.get('maxPrice') || '');
       setCondition(searchParams.get('condition') || '');
       setRadius(Number(searchParams.get('radius')) || 200);
     });
   }, [searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.resolve().then(async () => {
+      const dbRegions = await getRegions();
+      if (!cancelled) {
+        setRegions(dbRegions);
+      }
+    }).catch((error) => {
+      if (!cancelled) {
+        console.error('Error cargando regiones:', error);
+      }
+    }).finally(() => {
+      if (!cancelled) {
+        setLoadingRegions(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const applyFilters = (updatedFilters) => {
     const params = new URLSearchParams(searchParams);
@@ -103,12 +110,13 @@ function FilterControls() {
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-slate-400">Ubicación</label>
         <Select
-          value={region || 'all'}
+          value={regionId || 'all'}
           onValueChange={(value) => {
-            const selectedRegion = value === 'all' ? '' : value;
-            setRegion(selectedRegion);
-            applyFilters({ region: selectedRegion });
+            const selectedRegionId = value === 'all' ? '' : value;
+            setRegionId(selectedRegionId);
+            applyFilters({ regionId: selectedRegionId, region: '', comuna: '' });
           }}
+          disabled={loadingRegions}
         >
           <SelectTrigger className="w-full rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-100 focus:border-indigo-400">
             <div className="flex items-center gap-2">
@@ -118,8 +126,8 @@ function FilterControls() {
           </SelectTrigger>
           <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
             <SelectItem value="all">Todo Chile</SelectItem>
-            {REGIONS.map((item) => (
-              <SelectItem key={item} value={item}>{item}</SelectItem>
+            {regions.map((item) => (
+              <SelectItem key={item.id} value={item.id.toString()}>{item.shortName || item.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>

@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { mockGetPosts } from '@/api/posts';
+import { getPosts } from '@/api/posts';
 import { useUser } from '@/context/UserContext';
 import { EmptyState } from '@/components/marketplace/EmptyState';
 import { LoadingState } from '@/components/marketplace/LoadingState';
@@ -23,14 +23,14 @@ export function Home() {
       try {
         const filters = {
           search: searchParams.get('search') || '',
-          region: searchParams.get('region') || '',
+          regionId: searchParams.get('regionId') || '',
           comuna: searchParams.get('comuna') || '',
           minPrice: searchParams.get('minPrice') || '',
           maxPrice: searchParams.get('maxPrice') || '',
           condition: searchParams.get('condition') || ''
         };
 
-        let fetchedPosts = await mockGetPosts(filters);
+        let fetchedPosts = await getPosts(filters);
 
         if (user) {
           fetchedPosts = fetchedPosts.filter(post => post.seller !== user.id);
@@ -70,9 +70,9 @@ export function Home() {
           </h1>
           <p className="text-xs text-slate-400">
             {searchParams.get('comuna')
-                ? `Mostrando publicaciones en ${searchParams.get('comuna')}, ${searchParams.get('region') || ''}`
-                : searchParams.get('region')
-                  ? `Mostrando publicaciones en ${searchParams.get('region')}`
+                ? `Mostrando publicaciones en ${searchParams.get('comuna')}`
+                : searchParams.get('regionId')
+                  ? 'Mostrando publicaciones en la región seleccionada'
                   : 'Mostrando publicaciones en todas las ubicaciones'}
           </p>
         </div>

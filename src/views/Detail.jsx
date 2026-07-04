@@ -2,7 +2,7 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MapPin, Heart, MessageSquare, Eye, ArrowLeft, Loader2, Calendar } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { mockGetPostById } from '@/api/posts';
+import { getPostById } from '@/api/posts';
 import { mockCreateChat } from '@/api/messages';
 import { useUser } from '@/context/UserContext';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ export function Detail() {
     async function loadPost() {
       setLoading(true);
       try {
-        const fetchedPost = await mockGetPostById(id);
+        const fetchedPost = await getPostById(id);
         setPost(fetchedPost);
       } catch (error) {
         console.error('Error cargando publicación:', error);

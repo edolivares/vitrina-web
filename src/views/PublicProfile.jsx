@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Calendar, Star, UserRound } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { mockGetPublicProfile } from '@/api/posts';
+import { getPublicProfile } from '@/api/posts';
 import { useUser } from '@/context/UserContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState } from '@/components/marketplace/EmptyState';
@@ -26,7 +26,7 @@ export function PublicProfile() {
       setError(null);
 
       try {
-        const result = await mockGetPublicProfile(profileId);
+        const result = await getPublicProfile(profileId);
         setProfile(result.profile);
         setPosts(result.posts.map(post => ({
           ...post,
