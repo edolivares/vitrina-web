@@ -1,41 +1,57 @@
-import { loginSchema, registerSchema } from '@/schemas/auth.schema';
-import { MOCK_USER_IDS } from '@/config/constants';
+import apiClient from './apiClient';
+import { STORAGE_KEYS } from '@/config/constants';
 
-const DEFAULT_USER = {
-  id: MOCK_USER_IDS.DIEGO,
-  name: 'Diego Valdivia',
-  email: 'diego@vitrina.cl',
-  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200'
+const mapUserResponse = (user) => {
+  if (!user) return null;
+  return {
+    ...user,
+    avatarUrl: user.avatar?.url || null,
+  };
 };
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+export async function login(email, password) {
+  const response = await apiClient.post('/api/auth/login', { email, password });
+  const { token, data: user } = response.data;
 
-export async function mockLogin(email, password) {
+  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+  return mapUserResponse(user);
+}
 
-  loginSchema.parse({ email, password });
+export async function register(userData) {
+  const payload = {
+    name: userData.name,
+    email: userData.email,
+    password: userData.password,
+  };
 
-  await delay(800);
+  const response = await apiClient.post('/api/auth/register', payload);
+  return mapUserResponse(response.data.data);
+}
 
-  if (email === 'admin@vitrina.cl' && password === '123456') {
-    throw new Error('Credenciales inválidas');
+export async function logout() {
+  try {
+    await apiClient.post('/api/auth/logout');
+  } catch (error) {
+    console.error('Error al revocar la sesión en el servidor:', error);
+  } finally {
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.FAVORITES);
   }
+}
 
+export async function refreshSession() {
+  const response = await apiClient.post('/api/auth/refresh');
+  const { token, data: user } = response.data;
+
+  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
   return {
-    ...DEFAULT_USER,
-    email
+    token,
+    user: mapUserResponse(user),
   };
 }
 
-export async function mockRegister(userData) {
-
-  registerSchema.parse(userData);
-
-  await delay(800);
-
-  return {
-    id: crypto.randomUUID(),
-    name: userData.name,
-    email: userData.email,
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200'
-  };
+export async function getMe() {
+  const response = await apiClient.get('/api/auth/me');
+  return mapUserResponse(response.data.data);
 }
