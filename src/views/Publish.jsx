@@ -4,9 +4,10 @@ import { Camera, Loader2, Save, X } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { sileo } from 'sileo';
 import { useUser } from '@/context/UserContext';
-import { mockCreateDraft, mockCreatePost, mockGetPostById, mockUpdatePost } from '@/api/posts';
+import { createDraft, createPost, getPostById, updatePost, updateDraft } from '@/api/posts';
+import { getCitiesByRegion, getRegions } from '@/api/locations';
 import { postSchema } from '@/schemas/post.schema';
-import { FREE_ACCOUNT_LIMITS, STORAGE_KEYS } from '@/config/constants';
+import { FREE_ACCOUNT_LIMITS } from '@/config/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -14,12 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-
-const REGIONS_DATA = {
-  'Región de Coquimbo': ['La Serena', 'Coquimbo'],
-  'Región Metropolitana': ['Santiago', 'Providencia', 'Las Condes'],
-  'Región de Valparaíso': ['Valparaíso', 'Viña del Mar']
-};
 
 const MOCK_IMAGES_BANK = [
   'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=800',
@@ -29,13 +24,7 @@ const MOCK_IMAGES_BANK = [
   'https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&q=80&w=800'
 ];
 
-function getStoredDrafts() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.DRAFTS) || '[]');
-}
 
-function getStoredPosts() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
-}
 
 export function Publish() {
   const { user } = useUser();
@@ -49,33 +38,86 @@ export function Publish() {
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
-  const [region, setRegion] = useState('');
-  const [comuna, setComuna] = useState('');
+  const [regionId, setRegionId] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [regions, setRegions] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [loadingRegions, setLoadingRegions] = useState(true);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingPost, setLoadingPost] = useState(Boolean(draftId || postId));
+  const [initializingForm, setInitializingForm] = useState(true);
   const [images, setImages] = useState([]);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [registeringDraft, setRegisteringDraft] = useState(false);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
-  const isBusy = submitting || savingDraft || registeringDraft;
+  const isLoadingInitialData = initializingForm || loadingRegions || loadingPost || loadingCities;
+  const isBusy = submitting || savingDraft || registeringDraft || isLoadingInitialData;
+  const regionSelectValue = regions.some((item) => item.id.toString() === regionId) ? regionId : 'none';
+  const citySelectValue = cities.some((item) => item.id.toString() === cityId) ? cityId : 'none';
 
   useEffect(() => {
-    if (!draftId) return;
+    let cancelled = false;
+    const postToLoadId = draftId || postId;
 
-    const savedDrafts = getStoredDrafts();
-    const foundDraft = savedDrafts.find(draft => draft.id === draftId);
+    Promise.resolve().then(async () => {
+      setInitializingForm(true);
+      setLoadingRegions(true);
+      setLoadingPost(Boolean(postToLoadId));
+      setLoadingCities(Boolean(postToLoadId));
 
-    if (foundDraft) {
-      Promise.resolve().then(() => {
-        setTitle(foundDraft.title || '');
-        setPrice(foundDraft.price ? foundDraft.price.toString() : '');
-        setDescription(foundDraft.description || '');
-        setRegion(foundDraft.region || '');
-        setComuna(foundDraft.comuna || '');
-        setImages(foundDraft.images || []);
+      const [dbRegions, loadedPost] = await Promise.all([
+        getRegions(),
+        postToLoadId ? getPostById(postToLoadId) : Promise.resolve(null)
+      ]);
+
+      const loadedRegionId = loadedPost?.regionId || '';
+      const loadedCities = loadedRegionId ? await getCitiesByRegion(loadedRegionId) : [];
+
+      if (!cancelled) {
+        setRegions(dbRegions);
+        setCities(loadedCities);
+
+        if (loadedPost) {
+          setTitle(loadedPost.title === 'Sin Título' ? '' : loadedPost.title || '');
+          setPrice(loadedPost.price ? loadedPost.price.toString() : '');
+          setDescription(loadedPost.description || '');
+          setRegionId(loadedRegionId);
+          setCityId(loadedPost.cityId || '');
+          setImages(loadedPost.images || []);
+        }
+      }
+    }).catch((error) => {
+      if (cancelled) return;
+      console.error('Error cargando datos de publicación:', error);
+
+      if (postId) {
+        sileo.error({
+          title: 'No se pudo cargar la publicación',
+          description: error.message || 'La publicación no está disponible.'
+        });
+        navigate('/perfil');
+        return;
+      }
+
+      sileo.error({
+        title: postToLoadId ? 'No se pudo cargar el borrador' : 'No se pudieron cargar las regiones',
+        description: error.message || 'Intenta nuevamente en unos segundos.'
       });
-    }
-  }, [draftId]);
+    }).finally(() => {
+      if (!cancelled) {
+        setLoadingRegions(false);
+        setLoadingPost(false);
+        setLoadingCities(false);
+        setInitializingForm(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draftId, navigate, postId]);
 
   useEffect(() => {
     if (draftId || postId || !user) return;
@@ -86,7 +128,7 @@ export function Publish() {
       if (cancelled) return;
 
       setRegisteringDraft(true);
-      const draft = await mockCreateDraft(user);
+      const draft = await createDraft(user);
 
       if (!cancelled) {
         sileo.success({
@@ -114,27 +156,29 @@ export function Publish() {
     };
   }, [draftId, navigate, postId, user]);
 
-  useEffect(() => {
-    if (!postId) return;
+  const handleRegionChange = (value) => {
+    const nextRegionId = value === 'none' ? '' : value;
 
+    setRegionId(nextRegionId);
+    setCityId('');
+    setCities([]);
+
+    if (!nextRegionId) return;
+
+    setLoadingCities(true);
     Promise.resolve().then(async () => {
-      try {
-        const post = await mockGetPostById(postId);
-        setTitle(post.title || '');
-        setPrice(post.price ? post.price.toString() : '');
-        setDescription(post.description || '');
-        setRegion(post.region || '');
-        setComuna(post.comuna || '');
-        setImages(post.images || []);
-      } catch (error) {
-        sileo.error({
-          title: 'No se pudo cargar la publicación',
-          description: error.message || 'La publicación no está disponible en esta maqueta.'
-        });
-        navigate('/perfil');
-      }
+      const dbCities = await getCitiesByRegion(nextRegionId);
+      setCities(dbCities);
+    }).catch((error) => {
+      console.error('Error cargando comunas:', error);
+      sileo.error({
+        title: 'No se pudieron cargar las comunas',
+        description: error.message || 'Intenta nuevamente en unos segundos.'
+      });
+    }).finally(() => {
+      setLoadingCities(false);
     });
-  }, [navigate, postId]);
+  };
 
   const handleAddMockImage = (selectedImage) => {
     if (images.length >= FREE_ACCOUNT_LIMITS.MAX_IMAGES_PER_POST) {
@@ -159,32 +203,17 @@ export function Publish() {
       title,
       price: price === '' ? NaN : Number(price),
       description,
-      region,
-      comuna,
+      regionId,
+      cityId,
       images
     };
 
     try {
       postSchema.parse(postData);
       if (isEditingPost) {
-        await mockUpdatePost(postId, postData, user);
+        await updatePost(postId, postData, user);
       } else {
-        const activePosts = getStoredPosts().filter(post => post.seller === user.id && post.status === 'PUBLISHED');
-
-        if (activePosts.length >= FREE_ACCOUNT_LIMITS.MAX_ACTIVE_POSTS) {
-          sileo.error({
-            title: 'Límite de publicaciones activas',
-            description: `La cuenta gratuita permite hasta ${FREE_ACCOUNT_LIMITS.MAX_ACTIVE_POSTS} publicaciones activas. Archiva una antes de publicar otra.`
-          });
-          return;
-        }
-
-        await mockCreatePost(postData, user);
-      }
-
-      if (isEditingDraft) {
-        const savedDrafts = getStoredDrafts();
-        localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(savedDrafts.filter(draft => draft.id !== draftId)));
+        await createPost(postData, user);
       }
 
       navigate(isEditingPost ? '/perfil' : '/');
@@ -214,8 +243,6 @@ export function Publish() {
   const handleSaveDraft = () => {
     setErrors({});
 
-    const savedDrafts = getStoredDrafts();
-
     if (isEditingPost) {
       sileo.error({
         title: 'Ya es una publicación',
@@ -224,39 +251,40 @@ export function Publish() {
       return;
     }
 
-    if (!draftId && savedDrafts.length >= FREE_ACCOUNT_LIMITS.MAX_DRAFTS) {
-      sileo.error({
-        title: 'Límite de borradores',
-        description: `Límite de borradores alcanzado. Elimina alguno en tu perfil antes de guardar uno nuevo.`
-      });
-      return;
-    }
-
     const numericPrice = price === '' ? 0 : Number(price);
-    const draftData = {
-      id: draftId || `draft-${Math.random().toString(36).substring(2, 9)}`,
-      title,
-      price: Number.isNaN(numericPrice) ? 0 : numericPrice,
-      description,
-      region,
-      comuna,
-      images,
-      status: 'DRAFT'
-    };
 
-    const updatedDrafts = draftId
-      ? savedDrafts.map(draft => draft.id === draftId ? draftData : draft)
-      : [draftData, ...savedDrafts];
-
-    localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(updatedDrafts));
     setSavingDraft(true);
-    sileo.success({
-      title: 'Borrador guardado',
-      description: 'Redirigiendo a tu perfil...'
+
+    Promise.resolve().then(async () => {
+      if (draftId) {
+        // Real API draft
+        await updateDraft(draftId, {
+          title,
+          price: Number.isNaN(numericPrice) ? 0 : numericPrice,
+          description,
+          regionId,
+          cityId,
+          images,
+          condition: 'Usado' // default
+        });
+      }
+
+      sileo.success({
+        title: 'Borrador guardado',
+        description: 'Redirigiendo a tu perfil...'
+      });
+      setTimeout(() => {
+        setSavingDraft(false);
+        navigate('/perfil?tab=drafts');
+      }, 1200);
+    }).catch((error) => {
+      console.error('Error al guardar borrador:', error);
+      setSavingDraft(false);
+      sileo.error({
+        title: 'Error al guardar borrador',
+        description: error.message || 'No se pudo guardar el borrador en el servidor.'
+      });
     });
-    setTimeout(() => {
-      navigate('/perfil?tab=drafts');
-    }, 1200);
   };
 
   const handleCancel = () => {
@@ -286,7 +314,13 @@ export function Publish() {
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-slate-950/55 text-slate-100 backdrop-blur-sm">
             <Loader2 className="size-6 animate-spin text-indigo-300" />
             <span className="text-sm font-semibold">
-              {registeringDraft ? 'Preparando borrador...' : savingDraft ? 'Guardando borrador...' : 'Guardando publicación...'}
+              {isLoadingInitialData
+                ? 'Cargando información...'
+                : registeringDraft
+                ? 'Preparando borrador...'
+                : savingDraft
+                ? 'Guardando borrador...'
+                : 'Guardando publicación...'}
             </span>
           </div>
         )}
@@ -379,26 +413,40 @@ export function Publish() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-slate-400">Región</label>
-                <Select value={region || 'none'} onValueChange={(value) => { setRegion(value === 'none' ? '' : value); setComuna(''); }}>
+                <Select
+                  key={`region-${regions.length}-${regionSelectValue}`}
+                  value={regionSelectValue}
+                  onValueChange={handleRegionChange}
+                  disabled={loadingRegions}
+                >
                   <SelectTrigger className="rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-100 focus:border-indigo-400"><SelectValue placeholder="Selecciona región" /></SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
-                    <SelectItem value="none">Selecciona región</SelectItem>
-                    {Object.keys(REGIONS_DATA).map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    <SelectItem value="none">{loadingRegions ? 'Cargando regiones...' : 'Selecciona región'}</SelectItem>
+                    {regions.map((item) => (
+                      <SelectItem key={item.id} value={item.id.toString()}>{item.shortName || item.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {errors.region && <span className="pl-1 text-[10px] font-medium text-rose-400">{errors.region}</span>}
+                {errors.regionId && <span className="pl-1 text-[10px] font-medium text-rose-400">{errors.regionId}</span>}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-slate-400">Comuna</label>
-                <Select value={comuna || 'none'} onValueChange={(value) => setComuna(value === 'none' ? '' : value)} disabled={!region}>
+                <Select
+                  key={`city-${regionId}-${cities.length}-${citySelectValue}`}
+                  value={citySelectValue}
+                  onValueChange={(value) => setCityId(value === 'none' ? '' : value)}
+                  disabled={!regionId || loadingCities}
+                >
                   <SelectTrigger className="rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-100 focus:border-indigo-400 disabled:opacity-60"><SelectValue placeholder="Selecciona comuna" /></SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
-                    <SelectItem value="none">Selecciona comuna</SelectItem>
-                    {region && REGIONS_DATA[region].map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                    <SelectItem value="none">{loadingCities ? 'Cargando comunas...' : 'Selecciona comuna'}</SelectItem>
+                    {cities.map((item) => (
+                      <SelectItem key={item.id} value={item.id.toString()}>{item.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {errors.comuna && <span className="pl-1 text-[10px] font-medium text-rose-400">{errors.comuna}</span>}
+                {errors.cityId && <span className="pl-1 text-[10px] font-medium text-rose-400">{errors.cityId}</span>}
               </div>
             </div>
 

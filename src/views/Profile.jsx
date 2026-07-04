@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@/context/UserContext';
-import { mockGetPostsBySeller, mockUpdatePostStatus, mockGetPostById } from '@/api/posts';
+import { getPostsBySeller, updatePostStatus, getPostById, getDraftsBySeller, deletePost } from '@/api/posts';
 import { mockGetChats } from '@/api/messages';
 import { Eye, Edit, Trash2, AlertCircle, Heart, FolderHeart, FileText, MessageSquare, TrendingUp, Archive, Plus } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -16,22 +16,6 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileMetricsDialog } from '@/components/profile/ProfileMetricsDialog';
 import { formatPrice } from '@/lib/format';
 import { getPostMetrics } from '@/lib/profileMetrics';
-
-const INITIAL_DRAFTS = [
-  {
-    id: 'draft-1',
-    title: 'Estante de libros melamina blanca',
-    price: 35000,
-    description: 'Estante de libros de melamina de 15mm de espesor. Color blanco mate. Medidas aproximadas: 180cm de alto x 60cm de ancho x 30cm de fondo. Tiene 5 repisas.',
-    region: 'Región Metropolitana',
-    comuna: 'Santiago',
-    images: []
-  }
-];
-
-if (!localStorage.getItem(STORAGE_KEYS.DRAFTS)) {
-  localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(INITIAL_DRAFTS));
-}
 
 export function Profile() {
   const { user, favorites, toggleFavorite, updateUser } = useUser();
@@ -62,28 +46,19 @@ export function Profile() {
     setLoading(true);
     try {
 
-      const posts = await mockGetPostsBySeller(user.id);
+      const posts = await getPostsBySeller(user.id);
       setUserPosts(posts);
 
       const chats = await mockGetChats(user.id);
       setSellerChats(chats);
 
-      const savedDrafts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DRAFTS) || '[]');
-      const postSignatures = new Set(posts.map(post => `${post.title}|${post.price}|${post.images?.[0] || ''}`));
-      const realDrafts = savedDrafts.filter((draft) => {
-        const draftSignature = `${draft.title}|${draft.price}|${draft.images?.[0] || ''}`;
-
-        return !draft.id?.startsWith('edit-') && !draft.sourcePostId && !postSignatures.has(draftSignature);
-      });
-      if (realDrafts.length !== savedDrafts.length) {
-        localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(realDrafts));
-      }
-      setDrafts(realDrafts);
+      const apiDrafts = await getDraftsBySeller(user.id);
+      setDrafts(apiDrafts);
 
       const favoriteDetails = [];
       for (const favId of favorites) {
         try {
-          const detail = await mockGetPostById(favId);
+          const detail = await getPostById(favId);
           favoriteDetails.push(detail);
         } catch (err) {
           console.error(`Error cargando favorito ${favId}:`, err);
@@ -111,7 +86,7 @@ export function Profile() {
 
   const handleUpdateStatus = async (postId, newStatus) => {
     try {
-      await mockUpdatePostStatus(postId, newStatus);
+      await updatePostStatus(postId, newStatus);
       loadProfileData();
       sileo.success({
         title: "Publicación actualizada",
@@ -123,21 +98,24 @@ export function Profile() {
     }
   };
 
-  const handleDeleteDraft = (draftId) => {
-    const updatedDrafts = drafts.filter(d => d.id !== draftId);
-    localStorage.setItem(STORAGE_KEYS.DRAFTS, JSON.stringify(updatedDrafts));
-    setDrafts(updatedDrafts);
-    sileo.success({
-      title: "Borrador eliminado",
-      description: "El borrador se eliminó de esta maqueta local."
-    });
+  const handleDeleteDraft = async (draftId) => {
+    try {
+      await deletePost(draftId);
+      const updatedDrafts = drafts.filter(d => d.id !== draftId);
+      setDrafts(updatedDrafts);
+      sileo.success({
+        title: "Borrador eliminado",
+        description: "El borrador ha sido eliminado correctamente."
+      });
+    } catch (error) {
+      console.error('Error al eliminar el borrador:', error);
+      sileo.error({ title: "Error", description: "No se pudo eliminar el borrador." });
+    }
   };
 
-  const handleDeletePost = (postId) => {
+  const handleDeletePost = async (postId) => {
     try {
-      const posts = JSON.parse(localStorage.getItem(STORAGE_KEYS.POSTS) || '[]');
-      const updatedPosts = posts.filter(p => p.id !== postId);
-      localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(updatedPosts));
+      await deletePost(postId);
       loadProfileData();
       sileo.success({
         title: "Publicación eliminada",
@@ -298,112 +276,111 @@ export function Profile() {
 
                         return (
                           <>
-                      {/* Area de Imagen */}
-                      <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
-                        <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
-                        
-                        {/* Estado Badge (Top Left) */}
-                        <span className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm tracking-wider uppercase border-none ${
-                          post.status === 'PUBLISHED'
-                            ? 'bg-indigo-600/90'
-                            : post.status === 'SOLD'
-                            ? 'bg-blue-600/90'
-                            : 'bg-slate-800/90 text-slate-300'
-                        }`}>
-                          {post.status === 'PUBLISHED' ? 'Publicada' : post.status === 'SOLD' ? 'Vendida' : 'Archivada'}
-                        </span>
+                            {/* Area de Imagen */}
+                            <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
+                              <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
 
-                        {/* Contador de vistas (Top Right) */}
-                        <div className="absolute top-3 right-3 bg-slate-950/60 border border-slate-800/80 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          <span>{metrics.views}</span>
-                        </div>
-                      </div>
+                              {/* Estado Badge (Top Left) */}
+                              <span className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm tracking-wider uppercase border-none ${post.status === 'PUBLISHED'
+                                  ? 'bg-indigo-600/90'
+                                  : post.status === 'SOLD'
+                                    ? 'bg-blue-600/90'
+                                    : 'bg-slate-800/90 text-slate-300'
+                                }`}>
+                                {post.status === 'PUBLISHED' ? 'Publicada' : post.status === 'SOLD' ? 'Vendida' : 'Archivada'}
+                              </span>
 
-                      {/* Informacion */}
-                      <div className="p-4 flex-1 flex flex-col justify-between">
-                        <div className="flex flex-col gap-1">
-                          <h3 className="text-sm font-bold text-slate-200 truncate">{post.title}</h3>
-                          <span className="text-sm font-semibold text-indigo-400">{formatPrice(post.price)}</span>
-                          <span className="text-[10px] text-slate-500">Actualizado: hace unos momentos</span>
-                        </div>
+                              {/* Contador de vistas (Top Right) */}
+                              <div className="absolute top-3 right-3 bg-slate-950/60 border border-slate-800/80 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                <span>{metrics.views}</span>
+                              </div>
+                            </div>
 
-                        {/* Botones de accion */}
-                        <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between gap-1">
-                          {/* 1. Chats de esta publicacion */}
-                          <Link
-                            to={`/mensajes/publicacion/${post.id}`}
-                            className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all duration-250"
-                            title="Ver mensajes de esta publicación"
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                          </Link>
+                            {/* Informacion */}
+                            <div className="p-4 flex-1 flex flex-col justify-between">
+                              <div className="flex flex-col gap-1">
+                                <h3 className="text-sm font-bold text-slate-200 truncate">{post.title}</h3>
+                                <span className="text-sm font-semibold text-indigo-400">{formatPrice(post.price)}</span>
+                                <span className="text-[10px] text-slate-500">Actualizado: hace unos momentos</span>
+                              </div>
 
-                          {/* 2. Editar */}
-                          <button
-                            onClick={() => handleEditPost(post)}
-                            className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all duration-250"
-                            title="Editar publicación"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
+                              {/* Botones de accion */}
+                              <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between gap-1">
+                                {/* 1. Chats de esta publicacion */}
+                                <Link
+                                  to={`/mensajes/publicacion/${post.id}`}
+                                  className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all duration-250"
+                                  title="Ver mensajes de esta publicación"
+                                >
+                                  <MessageSquare className="w-4 h-4" />
+                                </Link>
 
-                          {/* 3. Archivar / Activar */}
-                          {post.status === 'PUBLISHED' ? (
-                            <ConfirmAction
-                              title="Archivar publicación"
-                              description="La publicación dejará de estar disponible para compradores, pero podrás restaurarla desde tu perfil."
-                              actionLabel="Archivar"
-                              onConfirm={() => handleUpdateStatus(post.id, 'ARCHIVED')}
-                            >
-                              <button
-                                className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 transition-all duration-250"
-                                title="Archivar publicación"
-                              >
-                                <Archive className="w-4 h-4" />
-                              </button>
-                            </ConfirmAction>
-                          ) : (
-                            <ConfirmAction
-                              title="Restaurar publicación"
-                              description="La publicación volverá a quedar disponible para compradores en la galería."
-                              actionLabel="Restaurar"
-                              onConfirm={() => handleUpdateStatus(post.id, 'PUBLISHED')}
-                            >
-                              <button
-                                className="p-2 rounded-lg bg-slate-950 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-250"
-                                title="Publicar de nuevo"
-                              >
-                                <Archive className="w-4 h-4" />
-                              </button>
-                            </ConfirmAction>
-                          )}
+                                {/* 2. Editar */}
+                                <button
+                                  onClick={() => handleEditPost(post)}
+                                  className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all duration-250"
+                                  title="Editar publicación"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
 
-                          {/* 4. Estadísticas */}
-                          <button
-                            onClick={() => setMetricsPost(post)}
-                            className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all duration-250"
-                            title="Estadísticas"
-                          >
-                            <TrendingUp className="w-4 h-4" />
-                          </button>
+                                {/* 3. Archivar / Activar */}
+                                {post.status === 'PUBLISHED' ? (
+                                  <ConfirmAction
+                                    title="Archivar publicación"
+                                    description="La publicación dejará de estar disponible para compradores, pero podrás restaurarla desde tu perfil."
+                                    actionLabel="Archivar"
+                                    onConfirm={() => handleUpdateStatus(post.id, 'ARCHIVED')}
+                                  >
+                                    <button
+                                      className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 transition-all duration-250"
+                                      title="Archivar publicación"
+                                    >
+                                      <Archive className="w-4 h-4" />
+                                    </button>
+                                  </ConfirmAction>
+                                ) : (
+                                  <ConfirmAction
+                                    title="Restaurar publicación"
+                                    description="La publicación volverá a quedar disponible para compradores en la galería."
+                                    actionLabel="Restaurar"
+                                    onConfirm={() => handleUpdateStatus(post.id, 'PUBLISHED')}
+                                  >
+                                    <button
+                                      className="p-2 rounded-lg bg-slate-950 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-250"
+                                      title="Publicar de nuevo"
+                                    >
+                                      <Archive className="w-4 h-4" />
+                                    </button>
+                                  </ConfirmAction>
+                                )}
 
-                          {/* 5. Eliminar */}
-                          <ConfirmAction
-                            title="Eliminar publicación"
-                            description="Esta acción quitará la publicación de tu listado mock. Puedes volver a crearla desde el formulario de publicación."
-                            actionLabel="Eliminar"
-                            onConfirm={() => handleDeletePost(post.id)}
-                          >
-                            <button
-                              className="p-2 rounded-lg bg-slate-950 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-250"
-                              title="Eliminar publicación"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </ConfirmAction>
-                        </div>
-                      </div>
+                                {/* 4. Estadísticas */}
+                                <button
+                                  onClick={() => setMetricsPost(post)}
+                                  className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all duration-250"
+                                  title="Estadísticas"
+                                >
+                                  <TrendingUp className="w-4 h-4" />
+                                </button>
+
+                                {/* 5. Eliminar */}
+                                <ConfirmAction
+                                  title="Eliminar publicación"
+                                  description="Esta acción quitará la publicación de tu listado mock. Puedes volver a crearla desde el formulario de publicación."
+                                  actionLabel="Eliminar"
+                                  onConfirm={() => handleDeletePost(post.id)}
+                                >
+                                  <button
+                                    className="p-2 rounded-lg bg-slate-950 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-250"
+                                    title="Eliminar publicación"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </ConfirmAction>
+                              </div>
+                            </div>
                           </>
                         );
                       })()}
@@ -498,15 +475,14 @@ export function Profile() {
                       {/* Area de Imagen */}
                       <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
                         <img src={post.images[0]} alt={post.title} className="w-full h-full object-cover" />
-                        
+
                         {/* Disponibilidad para el comprador */}
-                        <span className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm tracking-wider uppercase border-none ${
-                          post.status === 'PUBLISHED'
+                        <span className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm tracking-wider uppercase border-none ${post.status === 'PUBLISHED'
                             ? 'bg-emerald-600/90'
                             : post.status === 'SOLD'
-                            ? 'bg-blue-600/90'
-                            : 'bg-slate-800/90 text-slate-300'
-                        }`}>
+                              ? 'bg-blue-600/90'
+                              : 'bg-slate-800/90 text-slate-300'
+                          }`}>
                           {post.status === 'PUBLISHED' ? 'Disponible' : post.status === 'SOLD' ? 'Vendido' : 'No disponible'}
                         </span>
 
@@ -532,7 +508,7 @@ export function Profile() {
                             <Eye className="w-3.5 h-3.5" />
                             Ver Artículo
                           </Link>
-                          
+
                           <button
                             onClick={() => toggleFavorite(post.id)}
                             className="p-2 rounded-lg bg-slate-950 text-rose-500 hover:bg-rose-500/10 transition-colors"
