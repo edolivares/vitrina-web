@@ -1,5 +1,6 @@
 export const STORAGE_KEYS = {
   USER: 'vitrina_auth_user',
+  ACCESS_TOKEN: 'vitrina_access_token',
   FAVORITES: 'vitrina_favorites',
   DRAFTS: 'vitrina_drafts',
   POSTS: 'vitrina_posts',
