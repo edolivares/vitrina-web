@@ -1,10 +1,12 @@
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, MessageSquare, User, LogOut } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
+import { useChats } from '@/context/ChatContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export function Header({ showLogo = true }) {
   const { user, logout } = useUser();
+  const { hasUnreadMessages } = useChats();
   const navigate = useNavigate();
   const location = useLocation();
   const authRedirect = `${location.pathname}${location.search}`;
@@ -49,7 +51,9 @@ export function Header({ showLogo = true }) {
           <NavLink to="/mensajes" className={navItemClass}>
             <div className="relative">
               <MessageSquare className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-slate-900 animate-pulse" />
+              {hasUnreadMessages && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-slate-900 animate-pulse" />
+              )}
             </div>
             <span className="hidden sm:inline">Mensajes</span>
           </NavLink>

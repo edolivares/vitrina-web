@@ -4,6 +4,7 @@ import { Calendar, Star, UserRound } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { getPublicProfile } from '@/api/posts';
 import { useUser } from '@/context/UserContext';
+import { useFavorites } from '@/context/FavoritesContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState } from '@/components/marketplace/EmptyState';
 import { LoadingState } from '@/components/marketplace/LoadingState';
@@ -13,7 +14,8 @@ import { formatMonthYear, formatPrice, formatRelativeTime } from '@/lib/format';
 
 export function PublicProfile() {
   const { profileId } = useParams();
-  const { user, toggleFavorite, isFavorite } = useUser();
+  const { user } = useUser();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);

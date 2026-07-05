@@ -1,5 +1,12 @@
 import apiClient from './apiClient';
 
+/**
+ * Normaliza el ID de comuna asegurando que sea un entero positivo válido.
+ * 
+ * @param {string|number} cityId - ID de la comuna.
+ * @throws {Error} Si el ID no es válido.
+ * @returns {number} ID de la comuna normalizado numéricamente.
+ */
 function normalizeCityId(cityId) {
   const numericCityId = Number(cityId);
   if (!Number.isInteger(numericCityId) || numericCityId <= 0) {
@@ -8,6 +15,13 @@ function normalizeCityId(cityId) {
   return numericCityId;
 }
 
+/**
+ * Sube una imagen desde una URL externa y la asocia a una publicación.
+ * 
+ * @param {string} postId - UUID de la publicación.
+ * @param {string} url - URL remota de la imagen a subir.
+ * @returns {Promise<void>}
+ */
 async function uploadRemoteImageUrl(postId, url) {
   try {
     const response = await fetch(url);
@@ -29,6 +43,18 @@ async function uploadRemoteImageUrl(postId, url) {
   }
 }
 
+/**
+ * Obtiene el listado de publicaciones públicas aplicando filtros opcionales.
+ * 
+ * @param {Object} [filters={}] - Filtros de búsqueda.
+ * @param {string} [filters.search] - Texto de búsqueda.
+ * @param {string} [filters.regionId] - ID de la región.
+ * @param {string} [filters.comuna] - Nombre o ID de la comuna.
+ * @param {string|number} [filters.minPrice] - Precio mínimo.
+ * @param {string|number} [filters.maxPrice] - Precio máximo.
+ * @param {string} [filters.condition] - Estado físico (Nuevo/Usado).
+ * @returns {Promise<Array<Object>>} Listado de publicaciones normalizadas.
+ */
 export async function getPosts(filters = {}) {
   const params = new URLSearchParams();
   if (filters.search) params.append('search', filters.search);
@@ -53,6 +79,12 @@ export async function getPosts(filters = {}) {
   }));
 }
 
+/**
+ * Obtiene el detalle completo de una publicación por su ID.
+ * 
+ * @param {string} id - UUID de la publicación.
+ * @returns {Promise<Object>} Detalle normalizado de la publicación.
+ */
 export async function getPostById(id) {
   const response = await apiClient.get(`/api/posts/${id}`);
   const post = response.data.data;
@@ -71,12 +103,27 @@ export async function getPostById(id) {
     seller: post.seller.id,
     sellerName: post.seller.name,
     sellerAvatar: post.seller.avatarUrl || null,
+    sellerEmail: post.seller.email,
+    latitude: post.latitude ? Number(post.latitude) : null,
+    longitude: post.longitude ? Number(post.longitude) : null,
     createdAt: post.createdAt,
   };
 }
 
+/**
+ * Confirma y publica un borrador de publicación existente en el servidor.
+ * 
+ * @param {Object} postData - Datos del formulario de publicación.
+ * @param {string} postData.title - Título.
+ * @param {string} postData.description - Descripción.
+ * @param {number} postData.price - Precio.
+ * @param {string|number} postData.cityId - ID de la comuna.
+ * @param {string} postData.condition - Estado físico.
+ * @param {Array<string>} postData.images - Array de URLs de las imágenes.
+ * @throws {Error} Si no se encuentra un ID de borrador activo en la URL.
+ * @returns {Promise<Object>} Datos del post publicado.
+ */
 export async function createPost(postData) {
-  // Read draftId from URL
   const searchParams = new URLSearchParams(window.location.search);
   const draftId = searchParams.get('draftId');
   if (!draftId) {
@@ -100,11 +147,23 @@ export async function createPost(postData) {
   return response.data.data;
 }
 
+/**
+ * Crea un borrador vacío inicial para el usuario autenticado.
+ * 
+ * @returns {Promise<Object>} Datos del borrador creado en el servidor.
+ */
 export async function createDraft() {
   const response = await apiClient.post('/api/posts/draft');
   return response.data.data;
 }
 
+/**
+ * Actualiza los datos de una publicación activa.
+ * 
+ * @param {string} id - UUID de la publicación.
+ * @param {Object} postData - Nuevos datos de la publicación.
+ * @returns {Promise<Object>} Datos de la publicación actualizada.
+ */
 export async function updatePost(id, postData) {
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
   for (const imgUrl of postData.images) {
@@ -126,6 +185,13 @@ export async function updatePost(id, postData) {
   return response.data.data;
 }
 
+/**
+ * Actualiza el contenido de un borrador sin publicarlo definitivamente.
+ * 
+ * @param {string} id - UUID del borrador.
+ * @param {Object} postData - Datos del borrador.
+ * @returns {Promise<Object>} Datos del borrador actualizado.
+ */
 export async function updateDraft(id, postData) {
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
   for (const imgUrl of postData.images) {
@@ -147,11 +213,16 @@ export async function updateDraft(id, postData) {
   return response.data.data;
 }
 
+/**
+ * Obtiene todas las publicaciones activas y archivadas del usuario autenticado.
+ * 
+ * @param {string} sellerId - UUID del vendedor (usuario actual).
+ * @returns {Promise<Array<Object>>} Listado de publicaciones de su perfil.
+ */
 export async function getPostsBySeller(sellerId) {
   const response = await apiClient.get('/api/posts/me');
   const posts = response.data.data;
   
-  // Filter out drafts from the active/archived posts list
   const activeAndArchived = posts.filter((post) => post.status !== 'DRAFT');
 
   return activeAndArchived.map((post) => ({
@@ -167,11 +238,15 @@ export async function getPostsBySeller(sellerId) {
   }));
 }
 
+/**
+ * Obtiene únicamente las publicaciones en estado borrador (DRAFT) del usuario autenticado.
+ * 
+ * @returns {Promise<Array<Object>>} Listado de borradores del usuario.
+ */
 export async function getDraftsBySeller() {
   const response = await apiClient.get('/api/posts/me');
   const posts = response.data.data;
   
-  // Get draft posts
   const drafts = posts.filter((post) => post.status === 'DRAFT');
 
   return drafts.map((post) => ({
@@ -186,6 +261,12 @@ export async function getDraftsBySeller() {
   }));
 }
 
+/**
+ * Obtiene el perfil público de otro usuario vendedor, incluyendo sus publicaciones activas.
+ * 
+ * @param {string} profileId - UUID del vendedor.
+ * @returns {Promise<Object>} Información de perfil y array de publicaciones asociadas.
+ */
 export async function getPublicProfile(profileId) {
   const response = await apiClient.get(`/api/profiles/${profileId}`);
   const { profile, posts } = response.data.data;
@@ -216,6 +297,13 @@ export async function getPublicProfile(profileId) {
   };
 }
 
+/**
+ * Actualiza el estado lógico (publicado, archivado) de una publicación.
+ * 
+ * @param {string} id - UUID de la publicación.
+ * @param {string} status - Estado destino ('PUBLISHED' o 'ARCHIVED').
+ * @returns {Promise<Object>} Datos devueltos por el servidor.
+ */
 export async function updatePostStatus(id, status) {
   if (status === 'ARCHIVED') {
     const response = await apiClient.patch(`/api/posts/${id}/archive`);
@@ -229,7 +317,45 @@ export async function updatePostStatus(id, status) {
   }
 }
 
+/**
+ * Elimina (físicamente o de forma lógica) una publicación/borrador del servidor.
+ * 
+ * @param {string} id - UUID de la publicación.
+ * @returns {Promise<Object>} Respuesta del servidor.
+ */
 export async function deletePost(id) {
   const response = await apiClient.delete(`/api/posts/${id}`);
+  return response.data;
+}
+
+/**
+ * Obtiene el listado de publicaciones guardadas en favoritos por el usuario autenticado.
+ * 
+ * @returns {Promise<Array<Object>>} Listado de publicaciones marcadas como favoritas.
+ */
+export async function getSavedPosts() {
+  const response = await apiClient.get('/api/saved');
+  return response.data.data;
+}
+
+/**
+ * Guarda una publicación en favoritos para el usuario autenticado.
+ * 
+ * @param {string} postId - UUID de la publicación a guardar.
+ * @returns {Promise<Object>} Respuesta del servidor.
+ */
+export async function savePost(postId) {
+  const response = await apiClient.post('/api/saved', { postId });
+  return response.data;
+}
+
+/**
+ * Elimina una publicación de la lista de favoritos del usuario autenticado.
+ * 
+ * @param {string} postId - UUID de la publicación a quitar.
+ * @returns {Promise<Object>} Respuesta del servidor.
+ */
+export async function unsavePost(postId) {
+  const response = await apiClient.delete(`/api/saved/${postId}`);
   return response.data;
 }

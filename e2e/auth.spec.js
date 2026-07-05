@@ -76,11 +76,15 @@ test.describe('Flujo de Autenticación de Vitrina', () => {
     // Navegar al Login
     await page.goto('/login');
 
+    // Llenar campos
+    await page.fill('input[placeholder="nombre@correo.com"]', 'diego@vitrina.cl');
+    await page.fill('input[placeholder="••••••••"]', 'password123');
+
     // Hacemos click en iniciar sesión
     await page.click('button[type="submit"]');
 
     // Debería redirigir al Home y mostrar la inicial del nombre en el avatar
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL(/\/(\?.*)?$/);
     
     // El AvatarFallback debería mostrar las iniciales DV
     const avatarFallback = page.getByText('DV', { exact: true });
@@ -116,6 +120,10 @@ test.describe('Flujo de Autenticación de Vitrina', () => {
     });
 
     await page.goto('/login');
+
+    // Llenar campos
+    await page.fill('input[placeholder="nombre@correo.com"]', 'wrong@vitrina.cl');
+    await page.fill('input[placeholder="••••••••"]', 'wrongpassword123');
 
     // Intentar iniciar sesión
     await page.click('button[type="submit"]');
@@ -165,7 +173,7 @@ test.describe('Flujo de Autenticación de Vitrina', () => {
     await page.click('button[type="submit"]');
 
     // Debe redirigir a Home por el auto-login
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL(/\/(\?.*)?$/);
     await expect(page.getByText('DV', { exact: true })).toBeVisible();
 
     // Confirmar que la cookie de refresh token se seteó en auto-login

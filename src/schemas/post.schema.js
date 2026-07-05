@@ -6,7 +6,7 @@ export const postSchema = z.object({
     .max(100, 'El título no puede superar los 100 caracteres'),
   price: z.number({ invalid_type_error: 'El precio debe ser un número' })
     .int('El precio debe ser un número entero')
-    .nonnegative('El precio no puede ser negativo'),
+    .positive('El precio debe ser mayor a cero'),
   description: z.string()
     .min(10, 'La descripción debe tener al menos 10 caracteres')
     .max(2000, 'La descripción no puede superar los 2000 caracteres'),

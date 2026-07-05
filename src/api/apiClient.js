@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Cliente HTTP configurado con Axios.
+ * Maneja la inyección automática de tokens de acceso JWT (Bearer tokens)
+ * en cada petición y la renovación automática mediante refresh tokens
+ * interceptando las respuestas 401/403 no autorizadas.
+ */
+
 import axios from 'axios';
 import { STORAGE_KEYS } from '@/config/constants';
 
@@ -13,6 +20,14 @@ const apiClient = axios.create({
 let isRefreshing = false;
 let failedQueue = [];
 
+/**
+ * Procesa la cola de peticiones fallidas por expiración de token.
+ * Resuelve las peticiones encoladas si se obtiene un nuevo token,
+ * o las rechaza si falla el refresco.
+ * 
+ * @param {Error|null} error - Error de refresco en caso de fallo, o null si fue exitoso.
+ * @param {string|null} [token=null] - Nuevo token de acceso JWT si el refresco fue exitoso.
+ */
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -24,7 +39,11 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Interceptor de petición para inyectar el Bearer Token
+/**
+ * Interceptor de peticiones salientes de Axios.
+ * Intercepta cada petición para inyectar automáticamente el Bearer Token (token de acceso)
+ * recuperado de localStorage en la cabecera 'Authorization', si este existe.
+ */
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
@@ -36,7 +55,16 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor de respuesta para manejar la expiración del token (401/403)
+/**
+ * Interceptor de respuestas de Axios.
+ * Captura y procesa errores 401 y 403 (de autenticación/autorización)
+ * para realizar la renovación transparente de la sesión mediante el token de refresco:
+ * 
+ * 1. Si hay una petición de renovación en curso, encola el re-intento de esta petición.
+ * 2. Si es la primera petición fallida, inicia el refresco silencioso llamando al endpoint /api/auth/refresh.
+ * 3. Si la renovación tiene éxito, guarda el nuevo token, re-ejecuta la petición y libera la cola.
+ * 4. Si la renovación falla (sesión expirada del todo), limpia el almacenamiento local y redirige a /login.
+ */
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {

@@ -1,6 +1,12 @@
 import apiClient from './apiClient';
 import { STORAGE_KEYS } from '@/config/constants';
 
+/**
+ * Mapea y normaliza la respuesta del objeto usuario agregando la url del avatar.
+ * 
+ * @param {Object|null} user - Objeto de usuario recibido de la API.
+ * @returns {Object|null} Objeto de usuario normalizado con la URL del avatar.
+ */
 const mapUserResponse = (user) => {
   if (!user) return null;
   return {
@@ -9,6 +15,14 @@ const mapUserResponse = (user) => {
   };
 };
 
+/**
+ * Inicia sesión con el email y contraseña especificados.
+ * Almacena el token de acceso obtenido en el localStorage.
+ * 
+ * @param {string} email - Correo electrónico del usuario.
+ * @param {string} password - Contraseña del usuario.
+ * @returns {Promise<Object>} Perfil normalizado del usuario autenticado.
+ */
 export async function login(email, password) {
   const response = await apiClient.post('/api/auth/login', { email, password });
   const { token, data: user } = response.data;
@@ -17,6 +31,15 @@ export async function login(email, password) {
   return mapUserResponse(user);
 }
 
+/**
+ * Registra un nuevo usuario en la plataforma.
+ * 
+ * @param {Object} userData - Datos de registro del usuario.
+ * @param {string} userData.name - Nombre completo.
+ * @param {string} userData.email - Correo electrónico.
+ * @param {string} userData.password - Contraseña.
+ * @returns {Promise<Object>} Datos del usuario registrado y normalizado.
+ */
 export async function register(userData) {
   const payload = {
     name: userData.name,
@@ -28,6 +51,12 @@ export async function register(userData) {
   return mapUserResponse(response.data.data);
 }
 
+/**
+ * Cierra la sesión activa del usuario.
+ * Notifica al servidor para limpiar cookies y remueve la información local.
+ * 
+ * @returns {Promise<void>}
+ */
 export async function logout() {
   try {
     await apiClient.post('/api/auth/logout');
@@ -40,6 +69,12 @@ export async function logout() {
   }
 }
 
+/**
+ * Envía una petición para renovar el token de acceso utilizando la cookie de refresco.
+ * Actualiza el token de acceso en el localStorage.
+ * 
+ * @returns {Promise<Object>} Objeto con el nuevo token y los datos de usuario mapeados.
+ */
 export async function refreshSession() {
   const response = await apiClient.post('/api/auth/refresh');
   const { token, data: user } = response.data;
@@ -51,6 +86,11 @@ export async function refreshSession() {
   };
 }
 
+/**
+ * Obtiene el perfil de usuario del usuario autenticado actual.
+ * 
+ * @returns {Promise<Object>} Perfil normalizado del usuario actual.
+ */
 export async function getMe() {
   const response = await apiClient.get('/api/auth/me');
   return mapUserResponse(response.data.data);

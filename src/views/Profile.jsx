@@ -1,13 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useUser } from '@/context/UserContext';
-import { getPostsBySeller, updatePostStatus, getPostById, getDraftsBySeller, deletePost } from '@/api/posts';
-import { mockGetChats } from '@/api/messages';
+import { useState, useEffect } from 'react';
 import { Eye, Edit, Trash2, AlertCircle, Heart, FolderHeart, FileText, MessageSquare, TrendingUp, Archive, Plus } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { sileo } from 'sileo';
 import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { FREE_ACCOUNT_LIMITS, STORAGE_KEYS } from '@/config/constants';
+import { FREE_ACCOUNT_LIMITS } from '@/config/constants';
 import { ConfirmAction } from '@/components/feedback/ConfirmAction';
 import { AvatarDialog } from '@/components/profile/AvatarDialog';
 import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
@@ -16,115 +13,54 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileMetricsDialog } from '@/components/profile/ProfileMetricsDialog';
 import { formatPrice } from '@/lib/format';
 import { getPostMetrics } from '@/lib/profileMetrics';
+import { useProfile } from '@/hooks/useProfile';
+import { useFavorites } from '@/context/FavoritesContext';
 
 export function Profile() {
-  const { user, favorites, toggleFavorite, updateUser } = useUser();
+  const {
+    user,
+    userPosts,
+    drafts,
+    favPosts,
+    sellerChats,
+    loading,
+    isAvatarDialogOpen,
+    setIsAvatarDialogOpen,
+    isEditProfileDialogOpen,
+    setIsEditProfileDialogOpen,
+    isSavingProfile,
+    setIsSavingProfile,
+    metricsPost,
+    setMetricsPost,
+    loadProfileData,
+    handleUpdateStatus,
+    handleDeletePost,
+    handleDeleteDraft,
+    updateUser
+  } = useProfile();
+
+  const { toggleFavorite } = useFavorites();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = ['posts', 'drafts', 'favorites'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'posts';
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  const [userPosts, setUserPosts] = useState([]);
-  const [drafts, setDrafts] = useState([]);
-  const [favPosts, setFavPosts] = useState([]);
-  const [sellerChats, setSellerChats] = useState([]);
-
-  const [loading, setLoading] = useState(true);
-
-  // Estados para diálogo de avatar
-  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
-  const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [metricsPost, setMetricsPost] = useState(null);
-  const [profileName, setProfileName] = useState(user?.name || '');
-  const [profileEmail, setProfileEmail] = useState(user?.email || '');
+  // Estados locales para formularios/diálogos
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isDragActive, setIsDragActive] = useState(false);
 
-  const loadProfileData = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-
-      const posts = await getPostsBySeller(user.id);
-      setUserPosts(posts);
-
-      const chats = await mockGetChats(user.id);
-      setSellerChats(chats);
-
-      const apiDrafts = await getDraftsBySeller(user.id);
-      setDrafts(apiDrafts);
-
-      const favoriteDetails = [];
-      for (const favId of favorites) {
-        try {
-          const detail = await getPostById(favId);
-          favoriteDetails.push(detail);
-        } catch (err) {
-          console.error(`Error cargando favorito ${favId}:`, err);
-        }
-      }
-      setFavPosts(favoriteDetails);
-
-    } catch (error) {
-      console.error('Error cargando perfil:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, favorites]);
-
   useEffect(() => {
-    Promise.resolve().then(() => {
-      loadProfileData();
-    });
-  }, [loadProfileData, activeTab]);
+    if (user) {
+      setProfileName(user.name || '');
+      setProfileEmail(user.email || '');
+    }
+  }, [user]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setSearchParams(tab === 'posts' ? {} : { tab });
-  };
-
-  const handleUpdateStatus = async (postId, newStatus) => {
-    try {
-      await updatePostStatus(postId, newStatus);
-      loadProfileData();
-      sileo.success({
-        title: "Publicación actualizada",
-        description: newStatus === 'PUBLISHED' ? "La publicación ha sido activada de nuevo." : "La publicación ha sido archivada correctamente."
-      });
-    } catch (error) {
-      console.error(error);
-      sileo.error({ title: "Error", description: "No se pudo actualizar el estado de la publicación." });
-    }
-  };
-
-  const handleDeleteDraft = async (draftId) => {
-    try {
-      await deletePost(draftId);
-      const updatedDrafts = drafts.filter(d => d.id !== draftId);
-      setDrafts(updatedDrafts);
-      sileo.success({
-        title: "Borrador eliminado",
-        description: "El borrador ha sido eliminado correctamente."
-      });
-    } catch (error) {
-      console.error('Error al eliminar el borrador:', error);
-      sileo.error({ title: "Error", description: "No se pudo eliminar el borrador." });
-    }
-  };
-
-  const handleDeletePost = async (postId) => {
-    try {
-      await deletePost(postId);
-      loadProfileData();
-      sileo.success({
-        title: "Publicación eliminada",
-        description: "El artículo ha sido removido de tu listado."
-      });
-    } catch (error) {
-      console.error('Error al eliminar la publicación:', error);
-      sileo.error({ title: "Error", description: "No se pudo eliminar la publicación." });
-    }
   };
 
   const handleEditPost = (post) => {
@@ -184,8 +120,10 @@ export function Profile() {
   };
 
   const handleOpenEditProfile = () => {
-    setProfileName(user.name);
-    setProfileEmail(user.email);
+    if (user) {
+      setProfileName(user.name);
+      setProfileEmail(user.email);
+    }
     setIsEditProfileDialogOpen(true);
   };
 

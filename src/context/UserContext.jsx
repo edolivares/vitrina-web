@@ -9,20 +9,16 @@ const UserContext = createContext(null);
 
 /**
  * Proveedor del contexto de usuario. Administra la sesión del usuario,
- * sincronización con localStorage, persistencia de favoritos y estado de verificación inicial.
+ * sincronización con localStorage y estado de verificación inicial.
  *
  * @param {Object} props - Propiedades del componente.
  * @param {React.ReactNode} props.children - Nodos hijos a renderizar.
+ * @returns {React.ReactElement} Proveedor de contexto React.
  */
 export function UserProvider({ children }) {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     return savedUser ? JSON.parse(savedUser) : null;
-  });
-
-  const [favorites, setFavorites] = useState(() => {
-    const savedFavs = localStorage.getItem(STORAGE_KEYS.FAVORITES);
-    return savedFavs ? JSON.parse(savedFavs) : [];
   });
 
   const [loading, setLoading] = useState(true);
@@ -36,10 +32,10 @@ export function UserProvider({ children }) {
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(favorites));
-  }, [favorites]);
-
-  useEffect(() => {
+    /**
+     * Restaura la sesión del usuario al cargar la página a partir del token de acceso o intentando
+     * refrescar la sesión si el token expiró.
+     */
     const restoreSession = async () => {
       const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
       if (token) {
@@ -62,9 +58,11 @@ export function UserProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    /**
+     * Escucha el evento global de cierre de sesión para limpiar el estado del usuario de inmediato.
+     */
     const handleAuthLogout = () => {
       setUser(null);
-      setFavorites([]);
     };
 
     window.addEventListener('auth:logout', handleAuthLogout);
@@ -98,32 +96,21 @@ export function UserProvider({ children }) {
 
   /**
    * Cierra la sesión del usuario actual, invalida el token en el backend y limpia local storage.
+   * 
+   * @returns {Promise<void>}
    */
   const logout = async () => {
     await apiLogout();
     setUser(null);
-    setFavorites([]);
   };
 
+  /**
+   * Actualiza los datos locales del usuario actual en memoria y desencadena la sincronización.
+   * 
+   * @param {Object} updatedData - Datos de perfil actualizados del usuario.
+   */
   const updateUser = (updatedData) => {
     setUser((prev) => (prev ? { ...prev, ...updatedData } : null));
-  };
-
-  const toggleFavorite = (postId) => {
-    if (!user) return;
-
-    setFavorites((prevFavorites) => {
-      const id = String(postId);
-      if (prevFavorites.includes(id)) {
-        return prevFavorites.filter((favId) => favId !== id);
-      } else {
-        return [...prevFavorites, id];
-      }
-    });
-  };
-
-  const isFavorite = (postId) => {
-    return favorites.includes(String(postId));
   };
 
   if (loading) {
@@ -141,12 +128,9 @@ export function UserProvider({ children }) {
     <UserContext.Provider
       value={{
         user,
-        favorites,
         login,
         logout,
         register,
-        toggleFavorite,
-        isFavorite,
         updateUser,
         loading,
       }}
@@ -160,7 +144,7 @@ export function UserProvider({ children }) {
  * Hook para consumir los datos y métodos de autenticación del UserProvider.
  *
  * @throws {Error} Si el hook es utilizado fuera del UserProvider.
- * @returns {Object} Objeto con el estado del usuario, favoritos y métodos auxiliares.
+ * @returns {Object} Objeto con el estado del usuario y métodos auxiliares.
  */
 export function useUser() {
   const context = useContext(UserContext);

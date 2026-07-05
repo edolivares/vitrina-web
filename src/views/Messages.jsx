@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { Send, MessageSquare, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useUser } from '@/context/UserContext';
+import { useChats } from '@/context/ChatContext';
 import { mockGetChats, mockGetMessages, mockSendMessage } from '@/api/messages';
 import { sileo } from 'sileo';
 import { formatPrice, formatTime } from '@/lib/format';
@@ -17,10 +18,9 @@ export function Messages() {
   const legacyPostId = searchParams.get('postId');
   const activePostId = routePostId || searchParams.get('post');
 
-  const [chats, setChats] = useState([]);
+  const { chats, loadingChats, loadChats, markChatAsRead } = useChats();
   const [messages, setMessages] = useState([]);
 
-  const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newMessageText, setNewMessageText] = useState('');
   const [sending, setSending] = useState(false);
@@ -45,23 +45,7 @@ export function Messages() {
     return visibleChats.find(chat => chat.id === activeChatId) || null;
   }, [activeChatId, visibleChats]);
 
-  const loadChats = useCallback(async () => {
-    if (!user) return;
-    try {
-      const fetchedChats = await mockGetChats(user.id);
-      setChats(fetchedChats);
-    } catch (error) {
-      console.error('Error cargando conversaciones:', error);
-    } finally {
-      setLoadingChats(false);
-    }
-  }, [user]);
 
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      loadChats();
-    });
-  }, [loadChats]);
 
   useEffect(() => {
     if (!legacyChatId || routeChatId) return;
@@ -80,6 +64,7 @@ export function Messages() {
       try {
         const fetchedMessages = await mockGetMessages(activeChatId);
         setMessages(fetchedMessages);
+        markChatAsRead(activeChatId);
 
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -92,7 +77,7 @@ export function Messages() {
     }
 
     loadMessages();
-  }, [activeChat, activeChatId]);
+  }, [activeChat, activeChatId, markChatAsRead]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -106,8 +91,7 @@ export function Messages() {
       const sentMsg = await mockSendMessage(activeChatId, content, user.id);
       setMessages(prev => [...prev, sentMsg]);
 
-      const updatedChats = await mockGetChats(user.id);
-      setChats(updatedChats);
+      await loadChats();
 
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

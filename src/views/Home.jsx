@@ -1,59 +1,77 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, RefreshCw } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { getPosts } from '@/api/posts';
 import { useUser } from '@/context/UserContext';
+import { useFavorites } from '@/context/FavoritesContext';
 import { EmptyState } from '@/components/marketplace/EmptyState';
 import { LoadingState } from '@/components/marketplace/LoadingState';
 import { ProductCard } from '@/components/marketplace/ProductCard';
+import { Button } from '@/components/ui/button';
 import { formatPrice, formatRelativeTime } from '@/lib/format';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 
 export function Home() {
-  const { user, toggleFavorite, isFavorite } = useUser();
+  const { user } = useUser();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [searchParams] = useSearchParams();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadPosts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const filters = {
+        search: searchParams.get('search') || '',
+        regionId: searchParams.get('regionId') || '',
+        comuna: searchParams.get('comuna') || '',
+        minPrice: searchParams.get('minPrice') || '',
+        maxPrice: searchParams.get('maxPrice') || '',
+        condition: searchParams.get('condition') || '',
+        sort: searchParams.get('sort') || 'newest',
+      };
+
+      let fetchedPosts = await getPosts(filters);
+
+      if (user) {
+        fetchedPosts = fetchedPosts.filter(post => post.seller !== user.id);
+      }
+
+      // Ordenar localmente según el filtro por si la API no lo soporta directamente o para consistencia de mock
+      const sortVal = filters.sort;
+      if (sortVal === 'price_asc') {
+        fetchedPosts.sort((a, b) => a.price - b.price);
+      } else if (sortVal === 'price_desc') {
+        fetchedPosts.sort((a, b) => b.price - a.price);
+      } else {
+        // newest (por defecto)
+        fetchedPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      }
+
+      setPosts(fetchedPosts.map(post => {
+        const postDate = new Date(post.createdAt);
+
+        return {
+          ...post,
+          relativeTime: formatRelativeTime(post.createdAt),
+          isNew: postDate.getTime() > Date.now() - 3600000 * 24
+        };
+      }));
+    } catch (err) {
+      console.error('Error cargando publicaciones:', err);
+      setError('No pudimos conectar con el servidor. Por favor, verifica tu conexión e intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  }, [searchParams, user]);
 
   useEffect(() => {
-    async function loadPosts() {
-      setLoading(true);
-      try {
-        const filters = {
-          search: searchParams.get('search') || '',
-          regionId: searchParams.get('regionId') || '',
-          comuna: searchParams.get('comuna') || '',
-          minPrice: searchParams.get('minPrice') || '',
-          maxPrice: searchParams.get('maxPrice') || '',
-          condition: searchParams.get('condition') || ''
-        };
-
-        let fetchedPosts = await getPosts(filters);
-
-        if (user) {
-          fetchedPosts = fetchedPosts.filter(post => post.seller !== user.id);
-        }
-
-        setPosts(fetchedPosts.map(post => {
-          const postDate = new Date(post.createdAt);
-
-          return {
-            ...post,
-            relativeTime: formatRelativeTime(post.createdAt),
-            isNew: postDate.getTime() > Date.now() - 3600000 * 24
-          };
-        }));
-      } catch (error) {
-        console.error('Error cargando publicaciones:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     loadPosts();
-  }, [searchParams, user]);
+  }, [loadPosts]);
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row w-full items-start">
@@ -79,6 +97,18 @@ export function Home() {
 
         {loading ? (
           <LoadingState label="Buscando publicaciones..." />
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center gap-4 bg-slate-900/35 rounded-2xl p-6 border border-slate-800/80 max-w-lg mx-auto w-full">
+            <div className="p-3 bg-rose-500/10 text-rose-400 rounded-2xl w-fit animate-pulse">
+              <SlidersHorizontal className="w-8 h-8 rotate-90" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-200">Error de conexión</h3>
+            <p className="text-xs text-slate-500">{error}</p>
+            <Button onClick={loadPosts} className="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Reintentar
+            </Button>
+          </div>
         ) : posts.length === 0 ? (
           <EmptyState
             icon={SlidersHorizontal}
