@@ -1,11 +1,31 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from './UserContext';
-import { mockGetChats } from '@/api/messages';
+import { getChats, mapChatResponse, markChatAsRead as apiMarkChatAsRead } from '@/api/messages';
+import { disconnectPusher, getPusherClient, userChannelName } from '@/lib/realtime';
 
 /**
  * Contexto para la gestión global de chats y mensajes no leídos.
  */
 const ChatContext = createContext(null);
+
+const sortChatsByLastMessage = (items) =>
+  [...items].sort(
+    (a, b) =>
+      new Date(b.lastMessageAt || b.updatedAt || 0).getTime() -
+      new Date(a.lastMessageAt || a.updatedAt || 0).getTime()
+  );
+
+const upsertChat = (items, chat) => {
+  const normalizedChat = mapChatResponse(chat);
+  if (!normalizedChat) return items;
+
+  const exists = items.some((item) => item.id === normalizedChat.id);
+  const next = exists
+    ? items.map((item) => (item.id === normalizedChat.id ? normalizedChat : item))
+    : [normalizedChat, ...items];
+
+  return sortChatsByLastMessage(next);
+};
 
 /**
  * Proveedor de contexto para la gestión de chats.
@@ -20,15 +40,7 @@ export function ChatProvider({ children }) {
   const [chats, setChats] = useState([]);
   const [loadingChats, setLoadingChats] = useState(false);
   
-  // Guardamos las marcas de tiempo de la última vez que el usuario vio un chat
-  const [readChatTimestamps, setReadChatTimestamps] = useState(() => {
-    try {
-      const saved = localStorage.getItem('vitrina_read_chats');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
+
 
   /**
    * Carga los chats del usuario autenticado actual desde el servidor/mock.
@@ -42,7 +54,7 @@ export function ChatProvider({ children }) {
     }
     setLoadingChats(true);
     try {
-      const fetchedChats = await mockGetChats(user.id);
+      const fetchedChats = await getChats();
       setChats(fetchedChats);
     } catch (error) {
       console.error('Error cargando chats:', error);
@@ -55,14 +67,32 @@ export function ChatProvider({ children }) {
     loadChats();
   }, [loadChats]);
 
-  // Si cambia la lista de marcas de tiempo de lectura, las guardamos localmente (opcional, para persistencia UX)
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('vitrina_read_chats', JSON.stringify(readChatTimestamps));
-    } else {
-      localStorage.removeItem('vitrina_read_chats');
+    if (!user) {
+      disconnectPusher();
+      return undefined;
     }
-  }, [readChatTimestamps, user]);
+
+    const pusher = getPusherClient();
+    if (!pusher) return undefined;
+
+    const channelName = userChannelName(user.id);
+    const channel = pusher.subscribe(channelName);
+    const handleChatChanged = ({ chat }) => {
+      setChats((prevChats) => upsertChat(prevChats, chat));
+    };
+
+    channel.bind('chat.created', handleChatChanged);
+    channel.bind('chat.updated', handleChatChanged);
+
+    return () => {
+      channel.unbind('chat.created', handleChatChanged);
+      channel.unbind('chat.updated', handleChatChanged);
+      pusher.unsubscribe(channelName);
+    };
+  }, [user]);
+
+
 
   /**
    * Determina si el usuario tiene al menos un mensaje no leído.
@@ -72,37 +102,24 @@ export function ChatProvider({ children }) {
    */
   const hasUnreadMessages = useMemo(() => {
     if (!user || chats.length === 0) return false;
-    
-    return chats.some((chat) => {
-      // Si la última actualización del chat fue realizada por el propio usuario (él envió el último mensaje),
-      // no debe considerarse como no leído para él.
-      // En el mock, asumimos que si el comprador es el usuario y el último mensaje es el del sistema inicial, 
-      // ya está leído porque él lo inició.
-      if (chat.lastMessage === 'Conversación iniciada') {
-        return false;
-      }
-      
-      const lastRead = readChatTimestamps[chat.id];
-      if (!lastRead) {
-        // Si nunca lo ha abierto, es no leído
-        return true;
-      }
-      
-      return new Date(chat.updatedAt).getTime() > new Date(lastRead).getTime();
-    });
-  }, [chats, readChatTimestamps, user]);
+    return chats.some((chat) => chat.isUnread);
+  }, [chats, user]);
 
   /**
-   * Marca un chat específico como leído registrando la marca de tiempo actual.
+   * Marca un chat específico como leído en el servidor y actualiza el estado local.
    * 
    * @type {Function}
    * @param {string} chatId - UUID del chat a marcar.
    */
-  const markChatAsRead = useCallback((chatId) => {
-    setReadChatTimestamps((prev) => ({
-      ...prev,
-      [chatId]: new Date().toISOString(),
-    }));
+  const markChatAsRead = useCallback(async (chatId) => {
+    try {
+      await apiMarkChatAsRead(chatId);
+      setChats((prevChats) =>
+        prevChats.map((c) => (c.id === chatId ? { ...c, isUnread: false } : c))
+      );
+    } catch (error) {
+      console.error('Error al marcar chat como leído:', error);
+    }
   }, []);
 
   return (
@@ -113,7 +130,6 @@ export function ChatProvider({ children }) {
         hasUnreadMessages,
         loadChats,
         markChatAsRead,
-        readChatTimestamps,
       }}
     >
       {children}

@@ -3,9 +3,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { MapPin, Heart, MessageSquare, Eye, ArrowLeft, Loader2, Calendar, Star } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { getPostById } from '@/api/posts';
-import { mockCreateChat } from '@/api/messages';
+import { createChat } from '@/api/messages';
 import { useUser } from '@/context/UserContext';
 import { useFavorites } from '@/context/FavoritesContext';
+import { useChats } from '@/context/ChatContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sileo } from 'sileo';
@@ -18,6 +19,7 @@ export function Detail() {
   const navigate = useNavigate();
   const { user } = useUser();
   const { toggleFavorite, isFavorite } = useFavorites();
+  const { loadChats } = useChats();
 
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,8 +86,8 @@ export function Detail() {
     setChatLoading(true);
     try {
 
-      const chat = await mockCreateChat(post, user);
-
+      const chat = await createChat(post.id);
+      await loadChats();
       navigate(`/mensajes/${chat.id}`);
     } catch (error) {
       sileo.error({

@@ -3,7 +3,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useUser } from '@/context/UserContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { getPostsBySeller, getDraftsBySeller, updatePostStatus, deletePost } from '@/api/posts';
-import { mockGetChats } from '@/api/messages';
+import { getChats } from '@/api/messages';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 vi.mock('@/context/UserContext', () => ({
@@ -23,7 +23,7 @@ vi.mock('@/api/posts', () => ({
 }));
 
 vi.mock('@/api/messages', () => ({
-  mockGetChats: vi.fn(),
+  getChats: vi.fn(),
 }));
 
 vi.mock('sileo', () => ({
@@ -48,7 +48,7 @@ describe('useProfile Hook', () => {
     const mockChats = [{ id: 'chat-1', lastMessage: 'Hello' }];
 
     getPostsBySeller.mockResolvedValueOnce(mockPosts);
-    mockGetChats.mockResolvedValueOnce(mockChats);
+    getChats.mockResolvedValueOnce(mockChats);
     getDraftsBySeller.mockResolvedValueOnce(mockDrafts);
 
     const { result } = renderHook(() => useProfile());
@@ -58,7 +58,7 @@ describe('useProfile Hook', () => {
     });
 
     expect(getPostsBySeller).toHaveBeenCalledWith('user-1');
-    expect(mockGetChats).toHaveBeenCalledWith('user-1');
+    expect(getChats).toHaveBeenCalled();
     expect(getDraftsBySeller).toHaveBeenCalledWith('user-1');
 
     expect(result.current.userPosts).toEqual(mockPosts);
@@ -69,7 +69,7 @@ describe('useProfile Hook', () => {
 
   it('should call updatePostStatus and refresh when handleUpdateStatus is called', async () => {
     getPostsBySeller.mockResolvedValue([]);
-    mockGetChats.mockResolvedValue([]);
+    getChats.mockResolvedValue([]);
     getDraftsBySeller.mockResolvedValue([]);
     updatePostStatus.mockResolvedValueOnce({ success: true });
 
@@ -85,7 +85,7 @@ describe('useProfile Hook', () => {
 
   it('should call deletePost and refresh when handleDeletePost is called', async () => {
     getPostsBySeller.mockResolvedValue([]);
-    mockGetChats.mockResolvedValue([]);
+    getChats.mockResolvedValue([]);
     getDraftsBySeller.mockResolvedValue([]);
     deletePost.mockResolvedValueOnce({ success: true });
 

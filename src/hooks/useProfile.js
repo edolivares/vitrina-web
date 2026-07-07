@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@/context/UserContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { getPostsBySeller, updatePostStatus, getPostById, getDraftsBySeller, deletePost as apiDeletePost } from '@/api/posts';
-import { mockGetChats } from '@/api/messages';
+import { getChats } from '@/api/messages';
 import { sileo } from 'sileo';
 
 /**
@@ -58,7 +58,7 @@ export function useProfile() {
     try {
       const [posts, chats, apiDrafts] = await Promise.all([
         getPostsBySeller(user.id),
-        mockGetChats(user.id),
+        getChats(),
         getDraftsBySeller(user.id)
       ]);
 
