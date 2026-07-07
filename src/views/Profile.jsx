@@ -15,6 +15,7 @@ import { formatPrice } from '@/lib/format';
 import { getPostMetrics } from '@/lib/profileMetrics';
 import { useProfile } from '@/hooks/useProfile';
 import { useFavorites } from '@/context/FavoritesContext';
+import { useChats } from '@/context/ChatContext';
 
 export function Profile() {
   const {
@@ -40,6 +41,7 @@ export function Profile() {
   } = useProfile();
 
   const { toggleFavorite } = useFavorites();
+  const { chats } = useChats();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = ['posts', 'drafts', 'favorites'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'posts';
@@ -211,6 +213,7 @@ export function Profile() {
                     <div key={post.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700/80 hover:-translate-y-1 transition-all duration-300 flex flex-col relative">
                       {(() => {
                         const metrics = getPostMetrics(post, sellerChats);
+                        const hasPostUnread = chats.some((chat) => chat.postId === post.id && chat.isUnread);
 
                         return (
                           <>
@@ -230,7 +233,7 @@ export function Profile() {
 
                               {/* Contador de vistas (Top Right) */}
                               <div className="absolute top-3 right-3 bg-slate-950/60 border border-slate-800/80 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded backdrop-blur-sm flex items-center gap-1">
-                                <Eye className="w-3 h-3" />
+                                <Eye className="w-3.5 h-3.5" />
                                 <span>{metrics.views}</span>
                               </div>
                             </div>
@@ -251,7 +254,12 @@ export function Profile() {
                                   className="p-2 rounded-lg bg-slate-950 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all duration-250"
                                   title="Ver mensajes de esta publicación"
                                 >
-                                  <MessageSquare className="w-4 h-4" />
+                                  <div className="relative">
+                                    <MessageSquare className="w-4 h-4" />
+                                    {hasPostUnread && (
+                                      <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-slate-950 animate-pulse" />
+                                    )}
+                                  </div>
                                 </Link>
 
                                 {/* 2. Editar */}
