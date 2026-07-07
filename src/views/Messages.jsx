@@ -207,13 +207,13 @@ export function Messages() {
   if (!user) return null;
 
   return (
-    <div className="flex-1 w-full p-4 flex gap-6 h-[calc(100vh-120px)]">
+    <div className="flex h-[calc(100dvh-76px)] max-h-[calc(100dvh-76px)] min-h-0 w-full flex-1 gap-6 overflow-hidden px-4 pb-1 pt-4">
       <Helmet>
         <title>Mis Mensajes | Vitrina</title>
         <meta name="description" content="Conversa directamente con compradores y vendedores sobre tus artículos de manera privada y segura." />
       </Helmet>
 
-      <div className={`w-full md:w-80 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+      <div className={`min-h-0 w-full md:w-80 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
         activeChatId ? 'hidden md:flex' : 'flex'
       }`}>
         <div className="p-4 border-b border-slate-800">
@@ -238,17 +238,18 @@ export function Messages() {
         </div>
 
         {loadingChats ? (
-          <div className="flex-1 flex justify-center items-center text-slate-500 text-xs">Cargando bandeja...</div>
+          <div className="flex min-h-0 flex-1 justify-center items-center text-slate-500 text-xs">Cargando bandeja...</div>
         ) : visibleChats.length === 0 ? (
-          <div className="flex-1 flex flex-col justify-center items-center p-6 text-center text-slate-500 gap-2">
+          <div className="flex min-h-0 flex-1 flex-col justify-center items-center p-6 text-center text-slate-500 gap-2">
             <MessageSquare className="w-8 h-8 text-slate-700" />
             <span className="text-xs">
               {activePostId || legacyPostId ? 'No hay conversaciones para esta publicacion' : 'No tienes conversaciones activas'}
             </span>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto">
-            {visibleChats.map(chat => {
+          <div className="chat-scrollbar min-h-0 flex-1 basis-0 overflow-y-auto">
+            <div className="pr-2">
+              {visibleChats.map(chat => {
               const isActive = chat.id === activeChatId;
               const isUnread = Boolean(chat.isUnread);
               const otherName = getOtherParticipantName(chat);
@@ -295,18 +296,19 @@ export function Messages() {
                   </div>
                 </button>
               );
-            })}
+              })}
+            </div>
           </div>
         )}
       </div>
 
-      <div className={`flex-1 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+      <div className={`min-h-0 flex-1 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
         activeChatId ? 'flex' : 'hidden md:flex'
       }`}>
 
         {activeChatId && activeChat ? (
-          <>
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-900/40">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex-shrink-0 p-4 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-900/40">
 
               <button
                 onClick={() => navigate(activePostId ? `/mensajes/publicacion/${activePostId}` : '/mensajes')}
@@ -333,11 +335,11 @@ export function Messages() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+            <div className="chat-scrollbar min-h-0 flex-1 basis-0 overflow-y-auto overscroll-contain">
               {loadingMessages ? (
                 <div className="flex-1 flex justify-center items-center text-slate-500 text-xs">Cargando mensajes...</div>
               ) : (
-                <>
+                <div className="flex min-h-full flex-col gap-3 px-4 py-3 pr-6">
                   {messages.map(msg => {
                     const isMe = msg.sender === user.id;
                     return (
@@ -367,12 +369,12 @@ export function Messages() {
                       {typingUser} está escribiendo...
                     </div>
                   )}
-                </>
+                  <div ref={messagesEndRef} />
+                </div>
               )}
-              <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-800/80 bg-slate-900/20 flex gap-2">
+            <form onSubmit={handleSendMessage} className="flex-shrink-0 px-3 pb-3 pt-2.5 border-t border-slate-800/80 bg-slate-900/20 flex gap-2">
               <input
                 type="text"
                 value={newMessageText}
@@ -389,10 +391,10 @@ export function Messages() {
                 <Send className="w-4 h-4" />
               </button>
             </form>
-          </>
+          </div>
         ) : (
 
-          <div className="flex-1 flex flex-col justify-center items-center text-slate-500 gap-2 p-6 text-center">
+          <div className="flex min-h-0 flex-1 flex-col justify-center items-center text-slate-500 gap-2 p-6 text-center">
             <MessageSquare className="w-12 h-12 text-slate-800" />
             <h3 className="text-slate-300 font-bold">Tus conversaciones</h3>
             <p className="text-xs text-slate-500 max-w-xs">
