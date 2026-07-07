@@ -1,5 +1,21 @@
 import apiClient from './apiClient';
 
+function normalizeImageItem(image, index = 0) {
+  if (typeof image === 'string') {
+    return { id: null, url: image, sortOrder: index };
+  }
+
+  return {
+    id: image.id || image.mediaId || null,
+    url: image.url,
+    sortOrder: Number.isInteger(image.sortOrder) ? image.sortOrder : index,
+  };
+}
+
+function normalizeImages(images = []) {
+  return images.map(normalizeImageItem).filter((image) => image.url);
+}
+
 /**
  * Normaliza el ID de comuna asegurando que sea un entero positivo válido.
  * 
@@ -16,31 +32,35 @@ function normalizeCityId(cityId) {
 }
 
 /**
- * Sube una imagen desde una URL externa y la asocia a una publicación.
- * 
- * @param {string} postId - UUID de la publicación.
- * @param {string} url - URL remota de la imagen a subir.
- * @returns {Promise<void>}
+ * Sube un archivo de imagen real y lo asocia a una publicación.
  */
-async function uploadRemoteImageUrl(postId, url) {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const mimeType = blob.type || 'image/jpeg';
-    const file = new File([blob], 'post_image.jpg', { type: mimeType });
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('sortOrder', '0');
-    
-    await apiClient.post(`/api/posts/${postId}/media`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  } catch (error) {
-    console.error('Error al subir la imagen remota:', error);
-  }
+export async function uploadPostImage(postId, file, sortOrder = 0) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('sortOrder', String(sortOrder));
+
+  const response = await apiClient.post(`/api/posts/${postId}/media`, formData);
+  return normalizeImageItem(response.data.data, sortOrder);
+}
+
+export async function deletePostImage(mediaId) {
+  if (!mediaId) return;
+  await apiClient.delete(`/api/media/${mediaId}`);
+}
+
+export async function syncPostImages(postId, images = []) {
+  const normalizedImages = normalizeImages(images);
+
+  await Promise.all(
+    normalizedImages
+      .filter((image) => image.id)
+      .map((image, index) =>
+        apiClient.post(`/api/posts/${postId}/media`, {
+          mediaId: image.id,
+          sortOrder: index,
+        })
+      )
+  );
 }
 
 /**
@@ -100,6 +120,7 @@ export async function getPostById(id) {
     region: post.city.region?.shortName || post.city.region?.name || '',
     status: post.status,
     images: post.gallery.length > 0 ? post.gallery.map((g) => g.url) : [],
+    imageItems: normalizeImages(post.gallery || []),
     seller: post.seller.id,
     sellerName: post.seller.name,
     sellerAvatar: post.seller.avatarUrl || null,
@@ -119,7 +140,7 @@ export async function getPostById(id) {
  * @param {number} postData.price - Precio.
  * @param {string|number} postData.cityId - ID de la comuna.
  * @param {string} postData.condition - Estado físico.
- * @param {Array<string>} postData.images - Array de URLs de las imágenes.
+ * @param {Array<Object>} postData.images - Imágenes ya subidas y asociadas al borrador.
  * @throws {Error} Si no se encuentra un ID de borrador activo en la URL.
  * @returns {Promise<Object>} Datos del post publicado.
  */
@@ -130,9 +151,7 @@ export async function createPost(postData) {
     throw new Error('No se encontró el ID del borrador activo.');
   }
 
-  for (const imgUrl of postData.images) {
-    await uploadRemoteImageUrl(draftId, imgUrl);
-  }
+  await syncPostImages(draftId, postData.images);
 
   const payload = {
     title: postData.title,
@@ -165,12 +184,7 @@ export async function createDraft() {
  * @returns {Promise<Object>} Datos de la publicación actualizada.
  */
 export async function updatePost(id, postData) {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-  for (const imgUrl of postData.images) {
-    if (!imgUrl.startsWith(baseUrl) && !imgUrl.startsWith('/uploads')) {
-      await uploadRemoteImageUrl(id, imgUrl);
-    }
-  }
+  await syncPostImages(id, postData.images);
 
   const payload = {
     title: postData.title,
@@ -193,12 +207,7 @@ export async function updatePost(id, postData) {
  * @returns {Promise<Object>} Datos del borrador actualizado.
  */
 export async function updateDraft(id, postData) {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-  for (const imgUrl of postData.images) {
-    if (!imgUrl.startsWith(baseUrl) && !imgUrl.startsWith('/uploads')) {
-      await uploadRemoteImageUrl(id, imgUrl);
-    }
-  }
+  await syncPostImages(id, postData.images);
 
   const payload = {
     title: postData.title || 'Sin Título',

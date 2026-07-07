@@ -1,30 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Camera, Loader2, Save, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Camera, GripVertical, Loader2, Save, X } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { sileo } from 'sileo';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useUser } from '@/context/UserContext';
-import { createDraft, createPost, getPostById, updatePost, updateDraft } from '@/api/posts';
+import { createDraft, createPost, deletePostImage, getPostById, updatePost, updateDraft, uploadPostImage } from '@/api/posts';
 import { postSchema } from '@/schemas/post.schema';
 import { FREE_ACCOUNT_LIMITS } from '@/config/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useLocations } from '@/hooks/useLocations';
-
-const MOCK_IMAGES_BANK = [
-  'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1560343090-f0409e92791a?auto=format&fit=crop&q=80&w=800'
-];
 
 export function Publish() {
   const { user } = useUser();
@@ -66,10 +57,13 @@ export function Publish() {
   const [loadingPost, setLoadingPost] = useState(Boolean(draftId || postId));
   const [registeringDraft, setRegisteringDraft] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [draggedImageIndex, setDraggedImageIndex] = useState(null);
+  const fileInputRef = useRef(null);
 
   const isLoadingInitialData = loadingRegions || loadingPost || loadingCities;
-  const isBusy = isSubmitting || savingDraft || registeringDraft || isLoadingInitialData;
+  const isBusy = isSubmitting || savingDraft || registeringDraft || uploadingImages || isLoadingInitialData;
+  const currentPostId = draftId || postId;
 
   const regionSelectValue = regions.some((item) => item.id.toString() === regionId) ? regionId : 'none';
   const citySelectValue = cities.some((item) => item.id.toString() === cityId) ? cityId : 'none';
@@ -91,7 +85,7 @@ export function Publish() {
             description: loadedPost.description || '',
             regionId: loadedPost.regionId || '',
             cityId: loadedPost.cityId || '',
-            images: loadedPost.images || [],
+            images: loadedPost.imageItems || [],
           });
         }
       })
@@ -151,8 +145,28 @@ export function Publish() {
     };
   }, [draftId, navigate, postId, user]);
 
-  const handleAddMockImage = (selectedImage) => {
-    if (images.length >= FREE_ACCOUNT_LIMITS.MAX_IMAGES_PER_POST) {
+  const setOrderedImages = (nextImages) => {
+    setValue(
+      'images',
+      nextImages.map((image, index) => ({ ...image, sortOrder: index })),
+      { shouldValidate: true, shouldDirty: true }
+    );
+  };
+
+  const handleImageFiles = async (fileList) => {
+    const selectedFiles = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
+    if (selectedFiles.length === 0) return;
+
+    if (!currentPostId) {
+      sileo.error({
+        title: 'Borrador no disponible',
+        description: 'Espera a que se prepare el borrador antes de subir imágenes.',
+      });
+      return;
+    }
+
+    const availableSlots = FREE_ACCOUNT_LIMITS.MAX_IMAGES_PER_POST - images.length;
+    if (availableSlots <= 0) {
       sileo.error({
         title: 'Límite de imágenes',
         description: `Solo se permite subir un máximo de ${FREE_ACCOUNT_LIMITS.MAX_IMAGES_PER_POST} imágenes.`,
@@ -160,13 +174,74 @@ export function Publish() {
       return;
     }
 
-    if (images.includes(selectedImage)) return;
-    setValue('images', [...images, selectedImage], { shouldValidate: true });
-    setIsImageDialogOpen(false);
+    const filesToUpload = selectedFiles.slice(0, availableSlots);
+    if (selectedFiles.length > filesToUpload.length) {
+      sileo.error({
+        title: 'Límite de imágenes',
+        description: `Se cargarán solo ${filesToUpload.length} imágenes para respetar el máximo permitido.`,
+      });
+    }
+
+    setUploadingImages(true);
+    try {
+      const uploadedImages = [];
+      for (const file of filesToUpload) {
+        const uploadedImage = await uploadPostImage(currentPostId, file, images.length + uploadedImages.length);
+        uploadedImages.push(uploadedImage);
+      }
+      setOrderedImages([...images, ...uploadedImages]);
+    } catch (error) {
+      sileo.error({
+        title: 'No se pudo subir la imagen',
+        description: error.message || 'Intenta nuevamente con otra imagen.',
+      });
+    } finally {
+      setUploadingImages(false);
+    }
   };
 
-  const handleRemoveImage = (index) => {
-    setValue('images', images.filter((_, idx) => idx !== index), { shouldValidate: true });
+  const handleFileInputChange = (event) => {
+    handleImageFiles(event.target.files);
+    event.target.value = '';
+  };
+
+  const handleDropImages = (event) => {
+    event.preventDefault();
+    handleImageFiles(event.dataTransfer.files);
+  };
+
+  const handleMoveImage = (fromIndex, toIndex) => {
+    if (toIndex < 0 || toIndex >= images.length) return;
+    const nextImages = [...images];
+    const [movedImage] = nextImages.splice(fromIndex, 1);
+    nextImages.splice(toIndex, 0, movedImage);
+    setOrderedImages(nextImages);
+  };
+
+  const handleImageDropOrder = (targetIndex) => {
+    if (draggedImageIndex === null || draggedImageIndex === targetIndex) {
+      setDraggedImageIndex(null);
+      return;
+    }
+
+    handleMoveImage(draggedImageIndex, targetIndex);
+    setDraggedImageIndex(null);
+  };
+
+  const handleRemoveImage = async (index) => {
+    const imageToRemove = images[index];
+    setOrderedImages(images.filter((_, idx) => idx !== index));
+
+    if (!imageToRemove?.id) return;
+
+    try {
+      await deletePostImage(imageToRemove.id);
+    } catch (error) {
+      sileo.error({
+        title: 'No se pudo eliminar la imagen',
+        description: error.message || 'La imagen se quitó de la vista, pero no se pudo eliminar del servidor.',
+      });
+    }
   };
 
   const onFormSubmit = async (data) => {
@@ -262,6 +337,8 @@ export function Publish() {
                 ? 'Preparando borrador...'
                 : savingDraft
                 ? 'Guardando borrador...'
+                : uploadingImages
+                ? 'Subiendo imágenes...'
                 : 'Guardando publicación...'}
             </span>
           </div>
@@ -283,10 +360,34 @@ export function Publish() {
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Imágenes ({images.length} de {FREE_ACCOUNT_LIMITS.MAX_IMAGES_PER_POST})
                 </label>
-                <div className="grid grid-cols-5 gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+                <div
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={handleDropImages}
+                  className="grid grid-cols-2 gap-3 sm:grid-cols-5"
+                >
                   {images.map((img, index) => (
-                    <div key={img} className="group relative aspect-square overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/70">
-                      <img src={img} alt="Miniatura" className="size-full object-cover" />
+                    <div
+                      key={img.id || img.url}
+                      draggable
+                      onDragStart={() => setDraggedImageIndex(index)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={() => handleImageDropOrder(index)}
+                      onDragEnd={() => setDraggedImageIndex(null)}
+                      className="group relative aspect-square overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/70"
+                    >
+                      <img src={img.url} alt={`Imagen ${index + 1}`} className="size-full object-cover" />
+                      <div className="absolute left-1 top-1 flex items-center gap-1 rounded-md bg-slate-950/70 px-1.5 py-1 text-[10px] font-semibold text-slate-300">
+                        <GripVertical className="size-3" />
+                        {index + 1}
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
@@ -294,40 +395,36 @@ export function Publish() {
                       >
                         <X className="size-3.5" />
                       </button>
+                      <div className="absolute inset-x-1 bottom-1 flex justify-between opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveImage(index, index - 1)}
+                          disabled={index === 0}
+                          className="rounded-md bg-slate-950/75 p-1 text-slate-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <ArrowLeft className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveImage(index, index + 1)}
+                          disabled={index === images.length - 1}
+                          className="rounded-md bg-slate-950/75 p-1 text-slate-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <ArrowRight className="size-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
 
                   {images.length < FREE_ACCOUNT_LIMITS.MAX_IMAGES_PER_POST && (
-                    <Dialog open={isImageDialogOpen} onOpenChange={(open) => !isBusy && setIsImageDialogOpen(open)}>
-                      <DialogTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-700/80 bg-slate-900/70 text-slate-500 transition-all hover:border-indigo-400/60 hover:bg-slate-900 hover:text-slate-300"
-                        >
-                          <Camera className="size-5" />
-                          <span className="text-[9px] font-semibold uppercase">Cargar</span>
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="border border-slate-700 bg-slate-900 text-slate-200">
-                        <DialogHeader>
-                          <DialogTitle>Seleccionar imagen mock</DialogTitle>
-                          <DialogDescription>Elige una imagen de muestra para simular la carga del artículo.</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                          {MOCK_IMAGES_BANK.map((img) => (
-                            <button
-                              key={img}
-                              type="button"
-                              disabled={images.includes(img)}
-                              onClick={() => handleAddMockImage(img)}
-                              className="aspect-square overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/70 transition hover:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              <img src={img} alt="Imagen de muestra" className="size-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-700/80 bg-slate-900/70 text-slate-500 transition-all hover:border-indigo-400/60 hover:bg-slate-900 hover:text-slate-300"
+                    >
+                      {uploadingImages ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
+                      <span className="text-[9px] font-semibold uppercase">Cargar</span>
+                    </button>
                   )}
                 </div>
                 {errors.images && <span className="pl-1 text-[10px] font-medium text-rose-400">{errors.images.message}</span>}

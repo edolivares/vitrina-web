@@ -12,7 +12,11 @@ export const postSchema = z.object({
     .max(2000, 'La descripción no puede superar los 2000 caracteres'),
   regionId: z.string().min(1, 'Debe seleccionar una región'),
   cityId: z.string().min(1, 'Debe seleccionar una comuna'),
-  images: z.array(z.string().url('URL de imagen inválida'))
+  images: z.array(z.object({
+    id: z.string().nullable().optional(),
+    url: z.string().url('URL de imagen inválida'),
+    sortOrder: z.number().optional(),
+  }))
     .min(1, 'Debe subir al menos una imagen')
     .max(5, 'No puede subir más de 5 imágenes'),
   condition: z.string().optional()
