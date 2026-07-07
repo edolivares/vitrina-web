@@ -244,6 +244,7 @@ export async function getPostsBySeller(sellerId) {
     images: post.coverImage?.url ? [post.coverImage.url] : [],
     seller: sellerId,
     createdAt: post.createdAt,
+    viewsCount: post.viewsCount || 0,
   }));
 }
 
@@ -367,4 +368,15 @@ export async function savePost(postId) {
 export async function unsavePost(postId) {
   const response = await apiClient.delete(`/api/saved/${postId}`);
   return response.data;
+}
+
+/**
+ * Obtiene las métricas reales de la base de datos para una publicación específica.
+ * 
+ * @param {string} postId - UUID de la publicación.
+ * @returns {Promise<Object>} Datos reales de vistas, favoritos, chats y conversión.
+ */
+export async function getPostMetricsFromApi(postId) {
+  const response = await apiClient.get(`/api/posts/${postId}/metrics`);
+  return response.data.data;
 }

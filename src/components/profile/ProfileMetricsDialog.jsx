@@ -1,10 +1,45 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquare, TrendingUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatDate, formatPrice } from '@/lib/format';
 import { getPostMetrics } from '@/lib/profileMetrics';
+import { getPostMetricsFromApi } from '@/api/posts';
 
 export function ProfileMetricsDialog({ post, chats, onOpenChange }) {
+  const [realMetrics, setRealMetrics] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!post) {
+      setRealMetrics(null);
+      return;
+    }
+
+    let active = true;
+    async function fetchRealMetrics() {
+      setLoading(true);
+      try {
+        const data = await getPostMetricsFromApi(post.id);
+        if (active) {
+          setRealMetrics(data);
+        }
+      } catch (err) {
+        console.error("Error al cargar métricas reales:", err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchRealMetrics();
+
+    return () => {
+      active = false;
+    };
+  }, [post]);
+
   const metrics = post ? getPostMetrics(post, chats) : null;
   const maxWeekValue = metrics ? Math.max(...metrics.weeklyViews.map(day => day.value)) : 0;
 
@@ -14,7 +49,7 @@ export function ProfileMetricsDialog({ post, chats, onOpenChange }) {
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-100">Métricas de publicación</DialogTitle>
           <DialogDescription className="text-sm text-slate-400 mt-1">
-            Datos simulados para presentar el flujo de dashboard del vendedor.
+            Datos en tiempo real obtenidos de la plataforma.
           </DialogDescription>
         </DialogHeader>
 
@@ -42,10 +77,10 @@ export function ProfileMetricsDialog({ post, chats, onOpenChange }) {
             </div>
 
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <MetricCard value={metrics.views} label="Visitas" />
-              <MetricCard value={metrics.favorites} label="Favoritos" />
-              <MetricCard value={metrics.chatCount} label="Conversaciones" />
-              <MetricCard value={`${metrics.conversion}%`} label="Interés estimado" />
+              <MetricCard value={loading ? '...' : (realMetrics ? realMetrics.views.total : '...')} label="Visitas" />
+              <MetricCard value={loading ? '...' : (realMetrics ? realMetrics.favorites : '...')} label="Favoritos" />
+              <MetricCard value={loading ? '...' : (realMetrics ? realMetrics.conversations : '...')} label="Conversaciones" />
+              <MetricCard value={loading ? '...' : (realMetrics ? `${realMetrics.interestRate}%` : '...')} label="Interés estimado" />
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -63,8 +98,8 @@ export function ProfileMetricsDialog({ post, chats, onOpenChange }) {
                       <span className="text-xs font-medium text-slate-400">{dayMetric.day}</span>
                       <div className="h-3 overflow-hidden rounded-full bg-slate-900">
                         <div
-                          className="h-full rounded-full bg-indigo-500"
-                          style={{ width: `${Math.max(10, (dayMetric.value / maxWeekValue) * 100)}%` }}
+                           className="h-full rounded-full bg-indigo-500"
+                           style={{ width: `${Math.max(10, (dayMetric.value / maxWeekValue) * 100)}%` }}
                         />
                       </div>
                       <span className="text-right text-xs font-semibold text-slate-200">{dayMetric.value}</span>
@@ -78,7 +113,7 @@ export function ProfileMetricsDialog({ post, chats, onOpenChange }) {
                 <div className="mt-4 flex flex-col gap-3 text-xs">
                   <SummaryRow label="Estado" value={post.status === 'PUBLISHED' ? 'Publicada' : post.status === 'SOLD' ? 'Vendida' : 'Archivada'} />
                   <SummaryRow label="Ubicación" value={post.comuna} />
-                  <SummaryRow label="Último contacto" value={metrics.lastContact ? formatDate(metrics.lastContact) : 'Sin mensajes'} />
+                  <SummaryRow label="Último contacto" value={loading ? '...' : (realMetrics && realMetrics.lastContactAt ? formatDate(realMetrics.lastContactAt) : 'Sin mensajes')} />
                   <p className="rounded-xl bg-indigo-500/10 p-3 text-indigo-200">
                     {metrics.chatCount > 0
                       ? 'Esta publicación ya tiene conversaciones asociadas. Conviene responder desde la vista de mensajes filtrada.'
