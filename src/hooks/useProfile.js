@@ -1,44 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@/context/UserContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { getPostsBySeller, updatePostStatus, getPostById, getDraftsBySeller, deletePost as apiDeletePost } from '@/api/posts';
+import { getPostsBySeller, updatePostStatus, getPostById, getDraftsBySeller, deletePost as apiDeletePost, getPublicProfile } from '@/api/posts';
 import { getChats } from '@/api/messages';
 import { uploadAvatar } from '@/api/auth';
 import { sileo } from 'sileo';
 
-const PROFILE_REVIEW_DATA = {
-  score: 4.9,
-  count: 124,
-  summary: [
-    { rating: 5, count: 108 },
-    { rating: 4, count: 13 },
-    { rating: 3, count: 3 },
-    { rating: 2, count: 0 },
-    { rating: 1, count: 0 },
-  ],
-  reviews: [
-    {
-      id: 'profile-review-1',
-      author: 'Paula Espinoza',
-      rating: 5,
-      date: '2026-06-20T12:00:00.000Z',
-      comment: 'Muy buena comunicación y entrega rápida. El producto estaba tal como se describía.',
-    },
-    {
-      id: 'profile-review-2',
-      author: 'Diego Valdivia',
-      rating: 5,
-      date: '2026-06-12T12:00:00.000Z',
-      comment: 'Vendedor confiable, respondió rápido y coordinó sin problemas.',
-    },
-    {
-      id: 'profile-review-3',
-      author: 'Camila Rojas',
-      rating: 4,
-      date: '2026-05-28T12:00:00.000Z',
-      comment: 'Buena experiencia general. La publicación tenía información clara.',
-    },
-  ],
+const EMPTY_REVIEW_DATA = {
+  score: 0,
+  count: 0,
+  summary: [],
+  reviews: [],
 };
 
 const cropAvatarToSquare = (file) =>
@@ -127,6 +99,7 @@ export function useProfile() {
   const [drafts, setDrafts] = useState([]);
   const [favPosts, setFavPosts] = useState([]);
   const [sellerChats, setSellerChats] = useState([]);
+  const [reviewData, setReviewData] = useState(EMPTY_REVIEW_DATA);
   const [loading, setLoading] = useState(true);
 
   // Estados para diálogos
@@ -152,15 +125,22 @@ export function useProfile() {
     if (!user) return;
     setLoading(true);
     try {
-      const [posts, chats, apiDrafts] = await Promise.all([
+      const [posts, chats, apiDrafts, publicProfile] = await Promise.all([
         getPostsBySeller(user.id),
         getChats(),
-        getDraftsBySeller(user.id)
+        getDraftsBySeller(user.id),
+        getPublicProfile(user.id),
       ]);
 
       setUserPosts(posts);
       setSellerChats(chats);
       setDrafts(apiDrafts);
+      setReviewData({
+        score: publicProfile.profile.reviewScore,
+        count: publicProfile.profile.reviewCount,
+        summary: publicProfile.profile.reviewSummary,
+        reviews: publicProfile.profile.reviews,
+      });
 
       // Carga paralela controlada de detalles de favoritos
       const favoriteDetails = [];
@@ -369,7 +349,7 @@ export function useProfile() {
     setProfileEmail,
     isReviewsOpen,
     setIsReviewsOpen,
-    reviewData: PROFILE_REVIEW_DATA,
+    reviewData,
     metricsPost,
     setMetricsPost,
     loadProfileData,

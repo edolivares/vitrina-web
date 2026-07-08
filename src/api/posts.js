@@ -304,12 +304,10 @@ export async function getPublicProfile(profileId) {
       avatarUrl: profile.avatar?.url || null,
       bio: profile.bio || 'Este vendedor no ha agregado una biografía.',
       joinedAt: profile.joinedAt,
-      reviewScore: 4.8,
-      reviewCount: 3,
-      reviewSummary: [
-        { rating: 5, count: 3 }
-      ],
-      reviews: []
+      reviewScore: profile.reviewScore || 0,
+      reviewCount: profile.reviewCount || 0,
+      reviewSummary: profile.reviewSummary || [],
+      reviews: profile.reviews || []
     },
     posts: posts.map((post) => ({
       id: post.id,
