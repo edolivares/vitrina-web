@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from './UserContext';
 import { getChats, mapChatResponse, markChatAsRead as apiMarkChatAsRead } from '@/api/messages';
@@ -39,7 +40,7 @@ export function ChatProvider({ children }) {
   const { user } = useUser();
   const [chats, setChats] = useState([]);
   const [loadingChats, setLoadingChats] = useState(false);
-  
+  const [lastChatEvent, setLastChatEvent] = useState(null);
 
 
   /**
@@ -64,6 +65,7 @@ export function ChatProvider({ children }) {
   }, [user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadChats();
   }, [loadChats]);
 
@@ -78,21 +80,31 @@ export function ChatProvider({ children }) {
 
     const channelName = userChannelName(user.id);
     const channel = pusher.subscribe(channelName);
-    const handleChatChanged = ({ chat }) => {
+    const handleChatCreated = ({ chat }) => {
+      setChats((prevChats) => upsertChat(prevChats, chat));
+      const normalizedChat = mapChatResponse(chat);
+      if (normalizedChat) {
+        setLastChatEvent({
+          type: 'created',
+          chat: normalizedChat,
+          receivedAt: Date.now(),
+        });
+      }
+    };
+
+    const handleChatUpdated = ({ chat }) => {
       setChats((prevChats) => upsertChat(prevChats, chat));
     };
 
-    channel.bind('chat.created', handleChatChanged);
-    channel.bind('chat.updated', handleChatChanged);
+    channel.bind('chat.created', handleChatCreated);
+    channel.bind('chat.updated', handleChatUpdated);
 
     return () => {
-      channel.unbind('chat.created', handleChatChanged);
-      channel.unbind('chat.updated', handleChatChanged);
+      channel.unbind('chat.created', handleChatCreated);
+      channel.unbind('chat.updated', handleChatUpdated);
       pusher.unsubscribe(channelName);
     };
   }, [user]);
-
-
 
   /**
    * Determina si el usuario tiene al menos un mensaje no leído.
@@ -128,6 +140,7 @@ export function ChatProvider({ children }) {
         chats,
         loadingChats,
         hasUnreadMessages,
+        lastChatEvent,
         loadChats,
         markChatAsRead,
       }}

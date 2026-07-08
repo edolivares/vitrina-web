@@ -5,6 +5,7 @@ import { FavoritesProvider } from '@/context/FavoritesContext';
 import { ChatProvider } from '@/context/ChatContext';
 import { Toaster } from 'sileo';
 import { Header } from '@/components/layout/Header';
+import { ChatNotificationToasts } from '@/components/messages/ChatNotificationToasts';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 
 import { Home } from '@/views/Home';
@@ -40,7 +41,8 @@ function App() {
           <ChatProvider>
             <Router>
               <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-                <Toaster position="bottom-right" />
+                <Toaster position="bottom-right" theme="dark" />
+                <ChatNotificationToasts />
 
             <Header />
 
