@@ -17,6 +17,9 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useLocations } from '@/hooks/useLocations';
 
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+const ALLOWED_IMAGE_LABEL = 'JPG, PNG, WEBP o AVIF';
+
 export function Publish() {
   const { user } = useUser();
   const navigate = useNavigate();
@@ -59,6 +62,7 @@ export function Publish() {
   const [savingDraft, setSavingDraft] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [draggedImageIndex, setDraggedImageIndex] = useState(null);
+  const [isImageDropActive, setIsImageDropActive] = useState(false);
   const fileInputRef = useRef(null);
 
   const isLoadingInitialData = loadingRegions || loadingPost || loadingCities;
@@ -154,8 +158,21 @@ export function Publish() {
   };
 
   const handleImageFiles = async (fileList) => {
-    const selectedFiles = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
+    const selectedFiles = Array.from(fileList || []);
     if (selectedFiles.length === 0) return;
+
+    const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
+    const supportedFiles = imageFiles.filter((file) => ALLOWED_IMAGE_TYPES.has(file.type));
+    const unsupportedCount = selectedFiles.length - supportedFiles.length;
+
+    if (unsupportedCount > 0) {
+      sileo.error({
+        title: 'Formato de imagen no permitido',
+        description: `Sube imágenes en formato ${ALLOWED_IMAGE_LABEL}.`,
+      });
+    }
+
+    if (supportedFiles.length === 0) return;
 
     if (!currentPostId) {
       sileo.error({
@@ -174,8 +191,8 @@ export function Publish() {
       return;
     }
 
-    const filesToUpload = selectedFiles.slice(0, availableSlots);
-    if (selectedFiles.length > filesToUpload.length) {
+    const filesToUpload = supportedFiles.slice(0, availableSlots);
+    if (supportedFiles.length > filesToUpload.length) {
       sileo.error({
         title: 'Límite de imágenes',
         description: `Se cargarán solo ${filesToUpload.length} imágenes para respetar el máximo permitido.`,
@@ -207,7 +224,19 @@ export function Publish() {
 
   const handleDropImages = (event) => {
     event.preventDefault();
+    setIsImageDropActive(false);
     handleImageFiles(event.dataTransfer.files);
+  };
+
+  const handleImageDragOver = (event) => {
+    event.preventDefault();
+    setIsImageDropActive(true);
+  };
+
+  const handleImageDragLeave = (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setIsImageDropActive(false);
+    }
   };
 
   const handleMoveImage = (fromIndex, toIndex) => {
@@ -369,63 +398,70 @@ export function Publish() {
                   className="hidden"
                 />
                 <div
-                  onDragOver={(event) => event.preventDefault()}
+                  onDragOver={handleImageDragOver}
+                  onDragLeave={handleImageDragLeave}
                   onDrop={handleDropImages}
-                  className="grid grid-cols-2 gap-3 sm:grid-cols-5"
+                  className={`rounded-2xl border border-dashed p-3 transition-colors ${
+                    isImageDropActive
+                      ? 'border-indigo-400 bg-indigo-500/10'
+                      : 'border-slate-700/80 bg-slate-950/20'
+                  }`}
                 >
-                  {images.map((img, index) => (
-                    <div
-                      key={img.id || img.url}
-                      draggable
-                      onDragStart={() => setDraggedImageIndex(index)}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={() => handleImageDropOrder(index)}
-                      onDragEnd={() => setDraggedImageIndex(null)}
-                      className="group relative aspect-square overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/70"
-                    >
-                      <img src={img.url} alt={`Imagen ${index + 1}`} className="size-full object-cover" />
-                      <div className="absolute left-1 top-1 flex items-center gap-1 rounded-md bg-slate-950/70 px-1.5 py-1 text-[10px] font-semibold text-slate-300">
-                        <GripVertical className="size-3" />
-                        {index + 1}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                    {images.map((img, index) => (
+                      <div
+                        key={img.id || img.url}
+                        draggable
+                        onDragStart={() => setDraggedImageIndex(index)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={() => handleImageDropOrder(index)}
+                        onDragEnd={() => setDraggedImageIndex(null)}
+                        className="group relative aspect-square overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/70"
+                      >
+                        <img src={img.url} alt={`Imagen ${index + 1}`} className="size-full object-cover" />
+                        <div className="absolute left-1 top-1 flex items-center gap-1 rounded-md bg-slate-950/70 px-1.5 py-1 text-[10px] font-semibold text-slate-300">
+                          <GripVertical className="size-3" />
+                          {index + 1}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute right-1 top-1 rounded-md bg-slate-950/70 p-1 text-slate-400 transition-colors hover:text-rose-400"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                        <div className="absolute inset-x-1 bottom-1 flex justify-between opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveImage(index, index - 1)}
+                            disabled={index === 0}
+                            className="rounded-md bg-slate-950/75 p-1 text-slate-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <ArrowLeft className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveImage(index, index + 1)}
+                            disabled={index === images.length - 1}
+                            className="rounded-md bg-slate-950/75 p-1 text-slate-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <ArrowRight className="size-3.5" />
+                          </button>
+                        </div>
                       </div>
+                    ))}
+
+                    {images.length < FREE_ACCOUNT_LIMITS.MAX_IMAGES_PER_POST && (
                       <button
                         type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute right-1 top-1 rounded-md bg-slate-950/70 p-1 text-slate-400 transition-colors hover:text-rose-400"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-700/80 bg-slate-900/70 px-2 text-center text-slate-500 transition-all hover:border-indigo-400/60 hover:bg-slate-900 hover:text-slate-300"
                       >
-                        <X className="size-3.5" />
+                        {uploadingImages ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
+                        <span className="text-[9px] font-semibold uppercase">Arrastra o carga</span>
                       </button>
-                      <div className="absolute inset-x-1 bottom-1 flex justify-between opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveImage(index, index - 1)}
-                          disabled={index === 0}
-                          className="rounded-md bg-slate-950/75 p-1 text-slate-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-                        >
-                          <ArrowLeft className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMoveImage(index, index + 1)}
-                          disabled={index === images.length - 1}
-                          className="rounded-md bg-slate-950/75 p-1 text-slate-300 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-                        >
-                          <ArrowRight className="size-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {images.length < FREE_ACCOUNT_LIMITS.MAX_IMAGES_PER_POST && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-700/80 bg-slate-900/70 text-slate-500 transition-all hover:border-indigo-400/60 hover:bg-slate-900 hover:text-slate-300"
-                    >
-                      {uploadingImages ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
-                      <span className="text-[9px] font-semibold uppercase">Cargar</span>
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
                 {errors.images && <span className="pl-1 text-[10px] font-medium text-rose-400">{errors.images.message}</span>}
               </div>

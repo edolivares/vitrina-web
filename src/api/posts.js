@@ -16,6 +16,15 @@ function normalizeImages(images = []) {
   return images.map(normalizeImageItem).filter((image) => image.url);
 }
 
+function getApiErrorMessage(error, fallbackMessage) {
+  return (
+    error.response?.data?.message ||
+    error.response?.data?.details?.join(', ') ||
+    error.message ||
+    fallbackMessage
+  );
+}
+
 /**
  * Normaliza el ID de comuna asegurando que sea un entero positivo válido.
  * 
@@ -39,13 +48,21 @@ export async function uploadPostImage(postId, file, sortOrder = 0) {
   formData.append('file', file);
   formData.append('sortOrder', String(sortOrder));
 
-  const response = await apiClient.post(`/api/posts/${postId}/media`, formData);
-  return normalizeImageItem(response.data.data, sortOrder);
+  try {
+    const response = await apiClient.post(`/api/posts/${postId}/media`, formData);
+    return normalizeImageItem(response.data.data, sortOrder);
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'No se pudo subir la imagen.'), { cause: error });
+  }
 }
 
 export async function deletePostImage(mediaId) {
   if (!mediaId) return;
-  await apiClient.delete(`/api/media/${mediaId}`);
+  try {
+    await apiClient.delete(`/api/media/${mediaId}`);
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'No se pudo eliminar la imagen.'), { cause: error });
+  }
 }
 
 export async function syncPostImages(postId, images = []) {

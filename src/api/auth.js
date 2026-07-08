@@ -15,6 +15,15 @@ const mapUserResponse = (user) => {
   };
 };
 
+function getApiErrorMessage(error, fallbackMessage) {
+  return (
+    error.response?.data?.message ||
+    error.response?.data?.details?.join(', ') ||
+    error.message ||
+    fallbackMessage
+  );
+}
+
 /**
  * Inicia sesión con el email y contraseña especificados.
  * Almacena el token de acceso obtenido en el localStorage.
@@ -94,4 +103,16 @@ export async function refreshSession() {
 export async function getMe() {
   const response = await apiClient.get('/api/auth/me');
   return mapUserResponse(response.data.data);
+}
+
+export async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await apiClient.post('/api/auth/me/avatar', formData);
+    return mapUserResponse(response.data.data);
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'No se pudo actualizar la foto de perfil.'), { cause: error });
+  }
 }

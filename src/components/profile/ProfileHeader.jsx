@@ -1,7 +1,7 @@
 import { Calendar, Edit, Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-export function ProfileHeader({ user, onEditAvatar, onEditProfile }) {
+export function ProfileHeader({ user, reviewScore = 0, reviewCount = 0, onEditAvatar, onEditProfile, onOpenReviews }) {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
       <div className="flex flex-col md:flex-row items-center gap-6 flex-1 min-w-0">
@@ -33,10 +33,14 @@ export function ProfileHeader({ user, onEditAvatar, onEditProfile }) {
             <div className="flex items-center px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-full text-xs font-semibold">
               <span>Usuario Verificado</span>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950/40 border border-slate-800/80 rounded-full text-xs font-semibold text-slate-300">
+            <button
+              type="button"
+              onClick={onOpenReviews}
+              className="flex items-center gap-1.5 px-3 py-1 bg-slate-950/40 border border-slate-800/80 rounded-full text-xs font-semibold text-slate-300 transition-colors hover:border-amber-500/30 hover:text-slate-100"
+            >
               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
-              <span>4.9 (124 reseñas)</span>
-            </div>
+              <span>{reviewScore.toFixed(1)} ({reviewCount} reseñas)</span>
+            </button>
           </div>
         </div>
       </div>
