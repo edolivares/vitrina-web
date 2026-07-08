@@ -3,7 +3,96 @@ import { useUser } from '@/context/UserContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { getPostsBySeller, updatePostStatus, getPostById, getDraftsBySeller, deletePost as apiDeletePost } from '@/api/posts';
 import { getChats } from '@/api/messages';
+import { uploadAvatar } from '@/api/auth';
 import { sileo } from 'sileo';
+
+const PROFILE_REVIEW_DATA = {
+  score: 4.9,
+  count: 124,
+  summary: [
+    { rating: 5, count: 108 },
+    { rating: 4, count: 13 },
+    { rating: 3, count: 3 },
+    { rating: 2, count: 0 },
+    { rating: 1, count: 0 },
+  ],
+  reviews: [
+    {
+      id: 'profile-review-1',
+      author: 'Paula Espinoza',
+      rating: 5,
+      date: '2026-06-20T12:00:00.000Z',
+      comment: 'Muy buena comunicación y entrega rápida. El producto estaba tal como se describía.',
+    },
+    {
+      id: 'profile-review-2',
+      author: 'Diego Valdivia',
+      rating: 5,
+      date: '2026-06-12T12:00:00.000Z',
+      comment: 'Vendedor confiable, respondió rápido y coordinó sin problemas.',
+    },
+    {
+      id: 'profile-review-3',
+      author: 'Camila Rojas',
+      rating: 4,
+      date: '2026-05-28T12:00:00.000Z',
+      comment: 'Buena experiencia general. La publicación tenía información clara.',
+    },
+  ],
+};
+
+const cropAvatarToSquare = (file) =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+      const sourceX = Math.floor((image.naturalWidth - sourceSize) / 2);
+      const sourceY = Math.floor((image.naturalHeight - sourceSize) / 2);
+      const outputSize = 512;
+      const canvas = document.createElement('canvas');
+      canvas.width = outputSize;
+      canvas.height = outputSize;
+
+      canvas.getContext('2d').drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceSize,
+        sourceSize,
+        0,
+        0,
+        outputSize,
+        outputSize
+      );
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('No se pudo procesar la imagen.'));
+            return;
+          }
+
+          resolve({
+            file: new File([blob], 'avatar.jpg', { type: 'image/jpeg' }),
+            previewUrl: canvas.toDataURL('image/jpeg', 0.9),
+          });
+        },
+        'image/jpeg',
+        0.9
+      );
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('No se pudo leer la imagen seleccionada.'));
+    };
+
+    image.src = objectUrl;
+  });
 
 /**
  * Hook personalizado para unificar la gestión del perfil del usuario,
@@ -44,6 +133,13 @@ export function useProfile() {
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileName, setProfileName] = useState(() => user?.name || '');
+  const [profileEmail, setProfileEmail] = useState(() => user?.email || '');
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [isAvatarDragActive, setIsAvatarDragActive] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [metricsPost, setMetricsPost] = useState(null);
 
   /**
@@ -89,6 +185,7 @@ export function useProfile() {
   }, [user, favorites]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProfileData();
   }, [loadProfileData]);
 
@@ -150,6 +247,107 @@ export function useProfile() {
     }
   };
 
+  const handleOpenAvatarDialog = () => {
+    setAvatarPreviewUrl(null);
+    setAvatarFile(null);
+    setIsAvatarDialogOpen(true);
+  };
+
+  const processAvatarFile = async (file) => {
+    if (!file || !file.type.startsWith('image/')) {
+      sileo.error({
+        title: 'Archivo no soportado',
+        description: 'Por favor, selecciona un archivo de imagen válido (PNG, JPG o WEBP).',
+      });
+      return;
+    }
+
+    try {
+      const croppedAvatar = await cropAvatarToSquare(file);
+      setAvatarPreviewUrl(croppedAvatar.previewUrl);
+      setAvatarFile(croppedAvatar.file);
+    } catch (error) {
+      sileo.error({
+        title: 'No se pudo preparar la imagen',
+        description: error.message || 'Intenta nuevamente con otra imagen.',
+      });
+    }
+  };
+
+  const handleAvatarDragOver = (event) => {
+    event.preventDefault();
+    setIsAvatarDragActive(true);
+  };
+
+  const handleAvatarDragLeave = (event) => {
+    event.preventDefault();
+    setIsAvatarDragActive(false);
+  };
+
+  const handleAvatarDrop = (event) => {
+    event.preventDefault();
+    setIsAvatarDragActive(false);
+    if (event.dataTransfer.files?.[0]) {
+      processAvatarFile(event.dataTransfer.files[0]);
+    }
+  };
+
+  const handleAvatarFileSelect = (event) => {
+    if (event.target.files?.[0]) {
+      processAvatarFile(event.target.files[0]);
+    }
+    event.target.value = '';
+  };
+
+  const handleCancelAvatar = () => {
+    setIsAvatarDialogOpen(false);
+    setAvatarPreviewUrl(null);
+    setAvatarFile(null);
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!avatarFile) return;
+
+    setIsSavingAvatar(true);
+    try {
+      const updatedUser = await uploadAvatar(avatarFile);
+      updateUser(updatedUser);
+      handleCancelAvatar();
+      sileo.success({
+        title: '¡Avatar actualizado!',
+        description: 'Tu foto de perfil se ha guardado correctamente.',
+      });
+    } catch (error) {
+      sileo.error({
+        title: 'No se pudo guardar el avatar',
+        description: error.message || 'Intenta nuevamente con otra imagen.',
+      });
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  };
+
+  const handleOpenEditProfile = () => {
+    if (user) {
+      setProfileName(user.name);
+      setProfileEmail(user.email);
+    }
+    setIsEditProfileDialogOpen(true);
+  };
+
+  const handleSaveProfile = () => {
+    setIsSavingProfile(true);
+    updateUser({ name: profileName, email: profileEmail });
+    sileo.success({
+      title: 'Perfil actualizado',
+      description: 'Los datos se guardaron en la maqueta local.',
+    });
+    setTimeout(() => {
+      setIsSavingProfile(false);
+      setIsEditProfileDialogOpen(false);
+    }, 900);
+  };
+
   return {
     user,
     userPosts,
@@ -159,16 +357,33 @@ export function useProfile() {
     loading,
     isAvatarDialogOpen,
     setIsAvatarDialogOpen,
+    avatarPreviewUrl,
+    isAvatarDragActive,
+    isSavingAvatar,
     isEditProfileDialogOpen,
     setIsEditProfileDialogOpen,
     isSavingProfile,
-    setIsSavingProfile,
+    profileName,
+    setProfileName,
+    profileEmail,
+    setProfileEmail,
+    isReviewsOpen,
+    setIsReviewsOpen,
+    reviewData: PROFILE_REVIEW_DATA,
     metricsPost,
     setMetricsPost,
     loadProfileData,
     handleUpdateStatus,
     handleDeletePost,
     handleDeleteDraft,
-    updateUser
+    handleOpenAvatarDialog,
+    handleAvatarDragOver,
+    handleAvatarDragLeave,
+    handleAvatarDrop,
+    handleAvatarFileSelect,
+    handleCancelAvatar,
+    handleSaveAvatar,
+    handleOpenEditProfile,
+    handleSaveProfile,
   };
 }
