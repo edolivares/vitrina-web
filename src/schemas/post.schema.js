@@ -19,7 +19,9 @@ export const postSchema = z.object({
   }))
     .min(1, 'Debe subir al menos una imagen')
     .max(5, 'No puede subir más de 5 imágenes'),
-  condition: z.string().optional()
+  condition: z.enum(['Nuevo', 'Usado'], {
+    errorMap: () => ({ message: 'Debe seleccionar si el artículo es nuevo o usado' }),
+  })
 });
 
 export const filterSchema = z.object({

@@ -17,9 +17,12 @@ function normalizeImages(images = []) {
 }
 
 function getApiErrorMessage(error, fallbackMessage) {
+  const details = error.response?.data?.details;
+  const detailsMessage = Array.isArray(details) ? details.join(', ') : details;
+
   return (
     error.response?.data?.message ||
-    error.response?.data?.details?.join(', ') ||
+    detailsMessage ||
     error.message ||
     fallbackMessage
   );
@@ -186,11 +189,16 @@ export async function createPost(postData) {
 /**
  * Crea un borrador vacío inicial para el usuario autenticado.
  * 
+ * @param {string} idempotencyKey - UUID único generado por el cliente para evitar duplicados.
  * @returns {Promise<Object>} Datos del borrador creado en el servidor.
  */
-export async function createDraft() {
-  const response = await apiClient.post('/api/posts/draft');
-  return response.data.data;
+export async function createDraft(idempotencyKey) {
+  try {
+    const response = await apiClient.post('/api/posts/draft', { idempotencyKey });
+    return response.data.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'No se pudo preparar el borrador.'), { cause: error });
+  }
 }
 
 /**

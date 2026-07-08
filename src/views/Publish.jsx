@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useLocations } from '@/hooks/useLocations';
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
@@ -45,6 +46,7 @@ export function Publish() {
       regionId: '',
       cityId: '',
       images: [],
+      condition: 'Nuevo',
     },
   });
 
@@ -54,6 +56,7 @@ export function Publish() {
   const regionId = watch('regionId');
   const cityId = watch('cityId');
   const images = watch('images') || [];
+  const condition = watch('condition') || 'Nuevo';
 
   const { regions, cities, loadingRegions, loadingCities } = useLocations(regionId);
 
@@ -64,6 +67,10 @@ export function Publish() {
   const [draggedImageIndex, setDraggedImageIndex] = useState(null);
   const [isImageDropActive, setIsImageDropActive] = useState(false);
   const fileInputRef = useRef(null);
+  // UUID estable por sesión: se genera una sola vez al montar el componente.
+  // useRef garantiza que el valor no cambia entre re-renders ni entre el doble-mount de React StrictMode.
+  const idempotencyKeyRef = useRef(crypto.randomUUID());
+  const idempotencyKey = idempotencyKeyRef.current;
 
   const isLoadingInitialData = loadingRegions || loadingPost || loadingCities;
   const isBusy = isSubmitting || savingDraft || registeringDraft || uploadingImages || isLoadingInitialData;
@@ -90,6 +97,7 @@ export function Publish() {
             regionId: loadedPost.regionId || '',
             cityId: loadedPost.cityId || '',
             images: loadedPost.imageItems || [],
+            condition: loadedPost.condition || 'Usado',
           });
         }
       })
@@ -120,7 +128,7 @@ export function Publish() {
     let cancelled = false;
     setRegisteringDraft(true);
 
-    createDraft(user)
+    createDraft(idempotencyKey)
       .then((draft) => {
         if (!cancelled) {
           sileo.success({
@@ -147,7 +155,7 @@ export function Publish() {
     return () => {
       cancelled = true;
     };
-  }, [draftId, navigate, postId, user]);
+  }, [draftId, idempotencyKey, navigate, postId, user]);
 
   const setOrderedImages = (nextImages) => {
     setValue(
@@ -313,7 +321,7 @@ export function Publish() {
         regionId,
         cityId,
         images,
-        condition: 'Usado',
+        condition,
       });
 
       sileo.success({
@@ -345,8 +353,8 @@ export function Publish() {
   const pageTitle = isEditingPost
     ? 'Editar publicación'
     : isEditingDraft
-    ? 'Continuar borrador'
-    : 'Crear publicación';
+      ? 'Continuar borrador'
+      : 'Crear publicación';
 
   return (
     <div className="mx-auto flex w-full max-w-3xl justify-center px-4 py-8 sm:px-6 lg:py-10">
@@ -363,12 +371,12 @@ export function Publish() {
               {isLoadingInitialData
                 ? 'Cargando información...'
                 : registeringDraft
-                ? 'Preparando borrador...'
-                : savingDraft
-                ? 'Guardando borrador...'
-                : uploadingImages
-                ? 'Subiendo imágenes...'
-                : 'Guardando publicación...'}
+                  ? 'Preparando borrador...'
+                  : savingDraft
+                    ? 'Guardando borrador...'
+                    : uploadingImages
+                      ? 'Subiendo imágenes...'
+                      : 'Guardando publicación...'}
             </span>
           </div>
         )}
@@ -401,11 +409,10 @@ export function Publish() {
                   onDragOver={handleImageDragOver}
                   onDragLeave={handleImageDragLeave}
                   onDrop={handleDropImages}
-                  className={`rounded-2xl border border-dashed p-3 transition-colors ${
-                    isImageDropActive
+                  className={`rounded-2xl border border-dashed p-3 transition-colors ${isImageDropActive
                       ? 'border-indigo-400 bg-indigo-500/10'
                       : 'border-slate-700/80 bg-slate-950/20'
-                  }`}
+                    }`}
                 >
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                     {images.map((img, index) => (
@@ -499,6 +506,36 @@ export function Publish() {
                   className="min-h-32 rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-100 placeholder-slate-500 focus-visible:border-indigo-400 focus-visible:ring-0"
                 />
                 {errors.description && <span className="pl-1 text-[10px] font-medium text-rose-400">{errors.description.message}</span>}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-slate-400">Estado del artículo</label>
+                <ToggleGroup
+                  type="single"
+                  value={condition}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setValue('condition', value, { shouldValidate: true, shouldDirty: true });
+                  }}
+                  variant="outline"
+                  className="grid w-full grid-cols-2 gap-2"
+                >
+                  <ToggleGroupItem
+                    value="Nuevo"
+                    aria-label="Producto nuevo"
+                    className="h-11 rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-slate-100 data-[state=on]:border-indigo-400/80 data-[state=on]:bg-indigo-600/20 data-[state=on]:text-indigo-100"
+                  >
+                    Nuevo
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="Usado"
+                    aria-label="Producto usado"
+                    className="h-11 rounded-xl border-slate-700/80 bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-slate-100 data-[state=on]:border-indigo-400/80 data-[state=on]:bg-indigo-600/20 data-[state=on]:text-indigo-100"
+                  >
+                    Usado
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                {errors.condition && <span className="pl-1 text-[10px] font-medium text-rose-400">{errors.condition.message}</span>}
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
