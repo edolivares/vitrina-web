@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useProfile } from '@/hooks/useProfile';
 import { useUser } from '@/context/UserContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { getPostsBySeller, getDraftsBySeller, updatePostStatus, deletePost } from '@/api/posts';
+import { getPostsBySeller, getDraftsBySeller, updatePostStatus, deletePost, getPublicProfile } from '@/api/posts';
 import { getChats } from '@/api/messages';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -20,6 +20,7 @@ vi.mock('@/api/posts', () => ({
   getPostById: vi.fn(),
   updatePostStatus: vi.fn(),
   deletePost: vi.fn(),
+  getPublicProfile: vi.fn(),
 }));
 
 vi.mock('@/api/messages', () => ({
@@ -40,6 +41,14 @@ describe('useProfile Hook', () => {
     vi.clearAllMocks();
     useUser.mockReturnValue({ user: mockUser, updateUser: vi.fn() });
     useFavorites.mockReturnValue({ favorites: [] });
+    getPublicProfile.mockResolvedValue({
+      profile: {
+        reviewScore: 4.5,
+        reviewCount: 10,
+        reviewSummary: 'Muy bueno',
+        reviews: []
+      }
+    });
   });
 
   it('should fetch user posts, drafts and chats on load', async () => {

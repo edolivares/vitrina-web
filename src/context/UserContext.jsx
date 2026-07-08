@@ -23,51 +23,15 @@ export function UserProvider({ children }) {
 
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.USER);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    /**
-     * Restaura la sesión del usuario al cargar la página a partir del token de acceso o intentando
-     * refrescar la sesión si el token expiró.
-     */
-    const restoreSession = async () => {
-      const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      if (token) {
-        try {
-          const profile = await getMe();
-          setUser(profile);
-        } catch (error) {
-          try {
-            const data = await refreshSession();
-            setUser(data.user);
-          } catch (refreshError) {
-            await logout();
-          }
-        }
-      }
-      setLoading(false);
-    };
-
-    restoreSession();
-  }, []);
-
-  useEffect(() => {
-    /**
-     * Escucha el evento global de cierre de sesión para limpiar el estado del usuario de inmediato.
-     */
-    const handleAuthLogout = () => {
-      setUser(null);
-    };
-
-    window.addEventListener('auth:logout', handleAuthLogout);
-    return () => window.removeEventListener('auth:logout', handleAuthLogout);
-  }, []);
+  /**
+   * Cierra la sesión del usuario actual, invalida el token en el backend y limpia local storage.
+   * 
+   * @returns {Promise<void>}
+   */
+  const logout = async () => {
+    await apiLogout();
+    setUser(null);
+  };
 
   /**
    * Autentica un usuario con credenciales.
@@ -95,16 +59,6 @@ export function UserProvider({ children }) {
   };
 
   /**
-   * Cierra la sesión del usuario actual, invalida el token en el backend y limpia local storage.
-   * 
-   * @returns {Promise<void>}
-   */
-  const logout = async () => {
-    await apiLogout();
-    setUser(null);
-  };
-
-  /**
    * Actualiza los datos locales del usuario actual en memoria y desencadena la sincronización.
    * 
    * @param {Object} updatedData - Datos de perfil actualizados del usuario.
@@ -112,6 +66,52 @@ export function UserProvider({ children }) {
   const updateUser = (updatedData) => {
     setUser((prev) => (prev ? { ...prev, ...updatedData } : null));
   };
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.USER);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    /**
+     * Restaura la sesión del usuario al cargar la página a partir del token de acceso o intentando
+     * refrescar la sesión si el token expiró.
+     */
+    const restoreSession = async () => {
+      const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      if (token) {
+        try {
+          const profile = await getMe();
+          setUser(profile);
+        } catch {
+          try {
+            const data = await refreshSession();
+            setUser(data.user);
+          } catch {
+            await logout();
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    restoreSession();
+  }, []);
+
+  useEffect(() => {
+    /**
+     * Escucha el evento global de cierre de sesión para limpiar el estado del usuario de inmediato.
+     */
+    const handleAuthLogout = () => {
+      setUser(null);
+    };
+
+    window.addEventListener('auth:logout', handleAuthLogout);
+    return () => window.removeEventListener('auth:logout', handleAuthLogout);
+  }, []);
 
   if (loading) {
     return (

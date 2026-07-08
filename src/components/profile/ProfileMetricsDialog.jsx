@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { formatDate, formatPrice } from '@/lib/format';
 import { getPostMetricsFromApi } from '@/api/posts';
 
-export function ProfileMetricsDialog({ post, chats, onOpenChange }) {
+export function ProfileMetricsDialog({ post, onOpenChange }) {
   const [selectedPeriod, setSelectedPeriod] = useState('24h');
   const [realMetrics, setRealMetrics] = useState(null);
   const [loading, setLoading] = useState(false);

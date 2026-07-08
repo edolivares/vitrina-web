@@ -1,4 +1,3 @@
-import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { ChatProvider, useChats } from '@/context/ChatContext';
 import { useUser } from '@/context/UserContext';

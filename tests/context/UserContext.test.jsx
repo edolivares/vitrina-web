@@ -1,7 +1,6 @@
-import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { UserProvider, useUser } from '@/context/UserContext';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, getMe } from '@/api/auth';
+import { login as apiLogin, logout as apiLogout, getMe } from '@/api/auth';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 vi.mock('@/api/auth', () => ({

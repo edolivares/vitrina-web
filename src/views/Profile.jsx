@@ -105,7 +105,6 @@ export function Profile() {
 
       <ProfileMetricsDialog
         post={profile.metricsPost}
-        chats={profile.sellerChats}
         onOpenChange={(open) => !open && profile.setMetricsPost(null)}
       />
 
