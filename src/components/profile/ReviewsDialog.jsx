@@ -17,7 +17,7 @@ export function ReviewsDialog({
         <DialogHeader>
           <DialogTitle>Reseñas de {profileName}</DialogTitle>
           <DialogDescription className="text-slate-400">
-            Resumen simulado de experiencias asociadas a publicaciones anteriores.
+            Resumen de experiencias asociadas a publicaciones anteriores.
           </DialogDescription>
         </DialogHeader>
 
@@ -53,22 +53,34 @@ export function ReviewsDialog({
         </div>
 
         <div className="flex flex-col gap-3 border-t border-slate-800 pt-4">
-          <h3 className="text-sm font-bold text-slate-100">Últimas reseñas</h3>
-          {reviews.map((review) => (
-            <article key={review.id} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-100">{review.author}</h3>
-                  <span className="text-xs text-slate-500">{formatDate(review.date)}</span>
+          {reviews.length > 0 && (
+            <h3 className="text-sm font-bold text-slate-100">Últimas reseñas</h3>
+          )}
+          {reviews.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-800 bg-slate-950/40 px-4 py-8 text-center">
+              <Star className="size-7 text-slate-700" />
+              <span className="text-sm font-semibold text-slate-300">Aún no hay reseñas</span>
+              <p className="max-w-sm text-xs leading-relaxed text-slate-500">
+                Cuando este usuario reciba reseñas por sus ventas, aparecerán en este espacio.
+              </p>
+            </div>
+          ) : (
+            reviews.map((review) => (
+              <article key={review.id} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-100">{review.author}</h3>
+                    <span className="text-xs text-slate-500">{formatDate(review.date)}</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-300">
+                    <Star className="size-3 fill-amber-400 text-amber-400" />
+                    {review.rating}
+                  </span>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-300">
-                  <Star className="size-3 fill-amber-400 text-amber-400" />
-                  {review.rating}
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-slate-300">{review.comment}</p>
-            </article>
-          ))}
+                <p className="mt-3 text-sm leading-relaxed text-slate-300">{review.comment}</p>
+              </article>
+            ))
+          )}
         </div>
       </DialogContent>
     </Dialog>

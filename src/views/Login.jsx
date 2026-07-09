@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { sileo } from 'sileo';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useUser } from '@/context/UserContext';
 import { loginSchema } from '@/schemas/auth.schema';
 import { Button } from '@/components/ui/button';
@@ -10,46 +12,39 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 
 export function Login() {
-  const { login } = useUser();
+  const { user, login } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [email, setEmail] = useState('diego@vitrina.cl');
-  const [password, setPassword] = useState('password123');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+  });
 
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
+  const rawFrom = location.state?.from?.pathname || searchParams.get('redirect') || '/';
+  const from = (rawFrom === '/login' || rawFrom === '/registro') ? '/' : rawFrom;
 
-  const from = location.state?.from?.pathname || searchParams.get('redirect') || '/';
+  useEffect(() => {
+    if (user) {
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, from]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrors({});
-    setSubmitting(true);
-
+  const onSubmit = async (data) => {
     try {
-
-      loginSchema.parse({ email, password });
-
-      await login(email, password);
-
+      await login(data.email, data.password);
       navigate(from, { replace: true });
     } catch (err) {
-      if (err.name === 'ZodError') {
-        const fieldErrors = {};
-        err.errors.forEach((validationError) => {
-          fieldErrors[validationError.path[0]] = validationError.message;
-        });
-        setErrors(fieldErrors);
-      } else {
-        sileo.error({
-          title: 'No se pudo iniciar sesión',
-          description: err.message || 'Error de conexión'
-        });
-      }
-    } finally {
-      setSubmitting(false);
+      const errorMsg = err.response?.data?.message || err.message || 'Error de conexión';
+      sileo.error({
+        title: 'No se pudo iniciar sesión',
+        description: errorMsg,
+      });
     }
   };
 
@@ -74,7 +69,7 @@ export function Login() {
         </CardHeader>
 
         <CardContent className="p-0">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-400">
@@ -82,19 +77,18 @@ export function Login() {
               </label>
               <Input
                 type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register('email')}
                 placeholder="nombre@correo.com"
-                disabled={submitting}
-                className={`w-full bg-slate-950 border rounded-xl h-11 px-3.5 text-sm text-slate-200 placeholder-slate-600 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
+                disabled={isSubmitting}
+                className={`w-full bg-white border rounded-xl h-11 px-3.5 text-sm text-slate-900 placeholder-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
                   errors.email
                     ? 'border-rose-500/50 focus-visible:border-rose-500'
-                    : 'border-slate-800 focus-visible:border-indigo-500'
+                    : 'border-slate-300 focus-visible:border-indigo-500'
                 }`}
               />
               {errors.email && (
                 <span className="text-[10px] text-rose-400 font-medium pl-1">
-                  {errors.email}
+                  {errors.email.message}
                 </span>
               )}
             </div>
@@ -105,32 +99,41 @@ export function Login() {
                   Contraseña
                 </label>
               </div>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                disabled={submitting}
-                className={`w-full bg-slate-950 border rounded-xl h-11 px-3.5 text-sm text-slate-200 placeholder-slate-600 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
-                  errors.password
-                    ? 'border-rose-500/50 focus-visible:border-rose-500'
-                    : 'border-slate-800 focus-visible:border-indigo-500'
-                }`}
-              />
+              <div className="relative w-full flex items-center">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  {...register('password')}
+                  placeholder="••••••••"
+                  disabled={isSubmitting}
+                  className={`w-full bg-white border rounded-xl h-11 pl-3.5 pr-10 text-sm text-slate-900 placeholder-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
+                    errors.password
+                      ? 'border-rose-500/50 focus-visible:border-rose-500'
+                      : 'border-slate-300 focus-visible:border-indigo-500'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  disabled={isSubmitting}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {errors.password && (
                 <span className="text-[10px] text-rose-400 font-medium pl-1">
-                  {errors.password}
+                  {errors.password.message}
                 </span>
               )}
             </div>
 
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={isSubmitting}
               className="w-full py-6 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2 active:scale-[0.98] border-none"
               size="lg"
             >
-              {submitting ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Validando datos...

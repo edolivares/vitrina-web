@@ -5,6 +5,7 @@ export function AvatarDialog({
   open,
   previewUrl,
   isDragActive,
+  isSaving,
   onOpenChange,
   onDragOver,
   onDragLeave,
@@ -19,7 +20,7 @@ export function AvatarDialog({
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-100">Cambiar Foto de Perfil</DialogTitle>
           <DialogDescription className="text-sm text-slate-400 mt-1">
-            Arrastra una nueva foto o haz clic en la zona para seleccionarla desde tu equipo.
+            Arrastra una nueva foto o haz clic en la zona para seleccionarla. La imagen se recortará automáticamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -76,14 +77,14 @@ export function AvatarDialog({
           </button>
           <button
             onClick={onSave}
-            disabled={!previewUrl}
+            disabled={!previewUrl || isSaving}
             className={`px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all shadow-md ${
-              previewUrl
+              previewUrl && !isSaving
                 ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20 active:scale-95 cursor-pointer'
                 : 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
             }`}
           >
-            Guardar Cambios
+            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </button>
         </DialogFooter>
       </DialogContent>

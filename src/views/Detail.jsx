@@ -1,11 +1,14 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { MapPin, Heart, MessageSquare, Eye, ArrowLeft, Loader2, Calendar } from 'lucide-react';
+import { MapPin, Heart, MessageSquare, Eye, ArrowLeft, Loader2, Calendar, Star } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { mockGetPostById } from '@/api/posts';
-import { mockCreateChat } from '@/api/messages';
+import { getPostById } from '@/api/posts';
+import { createChat } from '@/api/messages';
 import { useUser } from '@/context/UserContext';
+import { useFavorites } from '@/context/FavoritesContext';
+import { useChats } from '@/context/ChatContext';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { sileo } from 'sileo';
 import { formatPrice } from '@/lib/format';
 
@@ -14,20 +17,25 @@ const PostImageGallery = lazy(() => import('@/components/marketplace/PostImageGa
 export function Detail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, toggleFavorite, isFavorite } = useUser();
+  const { user } = useUser();
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const { loadChats } = useChats();
 
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [chatLoading, setChatLoading] = useState(false);
 
   useEffect(() => {
     async function loadPost() {
       setLoading(true);
+      setError(null);
       try {
-        const fetchedPost = await mockGetPostById(id);
+        const fetchedPost = await getPostById(id);
         setPost(fetchedPost);
-      } catch (error) {
-        console.error('Error cargando publicación:', error);
+      } catch (err) {
+        console.error('Error cargando publicación:', err);
+        setError('No se pudo cargar la publicación. Verifica tu conexión de red o si el artículo sigue publicado.');
       } finally {
         setLoading(false);
       }
@@ -41,6 +49,18 @@ export function Detail() {
       <div className="flex-1 flex flex-col justify-center items-center py-20 gap-3 text-slate-400">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
         <span className="text-sm font-medium">Cargando detalles del artículo...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col justify-center items-center py-20 text-center gap-4 bg-slate-900/35 rounded-2xl max-w-lg mx-auto w-full p-8 border border-slate-800/80 my-8">
+        <h3 className="text-lg font-bold text-slate-300">Error de Carga</h3>
+        <p className="text-xs text-slate-500 max-w-xs">{error}</p>
+        <Link to="/" className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold mt-2 flex items-center gap-1">
+          <ArrowLeft className="w-3.5 h-3.5" /> Volver a inicio
+        </Link>
       </div>
     );
   }
@@ -66,8 +86,8 @@ export function Detail() {
     setChatLoading(true);
     try {
 
-      const chat = await mockCreateChat(post, user);
-
+      const chat = await createChat(post.id);
+      await loadChats();
       navigate(`/mensajes/${chat.id}`);
     } catch (error) {
       sileo.error({
@@ -164,15 +184,23 @@ export function Detail() {
 
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <img
-                src={post.sellerAvatar}
-                alt={post.sellerName}
-                className="w-10 h-10 rounded-full object-cover border border-slate-700"
-              />
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-slate-200">{post.sellerName}</span>
-                <span className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
-                  <Calendar className="w-3 h-3" /> Vendedor local
+              <Avatar className="w-10 h-10 border border-slate-700 shadow-md">
+                <AvatarImage src={post.sellerAvatar} alt={post.sellerName} className="object-cover" />
+                <AvatarFallback className="text-xs bg-slate-800 text-slate-200 font-semibold">
+                  {post.sellerName
+                    ? post.sellerName.split(' ').map((namePart) => namePart[0]).join('').toUpperCase()
+                    : 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-200">{post.sellerName}</span>
+                  <span className="text-[10px] text-amber-500 font-semibold flex items-center gap-0.5 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 leading-none">
+                    <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> 4.5
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500 flex items-center gap-1 mt-1">
+                  <Calendar className="w-3 h-3 text-slate-400" /> Registrado: 12 Mayo 2024
                 </span>
               </div>
             </div>
@@ -200,7 +228,7 @@ export function Detail() {
                 >
                   <Link to={`/perfil/${post.seller}`}>
                     <Eye className="w-3.5 h-3.5" />
-                    Ver más
+                    Ver perfil
                   </Link>
                 </Button>
 
@@ -209,8 +237,8 @@ export function Detail() {
                   disabled={!user || isOwner}
                   variant={isFav ? "destructive" : "outline"}
                   className={`py-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] ${isFav
-                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
-                      : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 disabled:opacity-55 disabled:cursor-not-allowed'
+                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
+                    : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 disabled:opacity-55 disabled:cursor-not-allowed'
                     }`}
                 >
                   <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />
@@ -224,18 +252,37 @@ export function Detail() {
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Ubicación aproximada
             </h3>
-            <div className="h-32 bg-slate-950 border border-slate-800 rounded-2xl relative overflow-hidden flex items-center justify-center">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:16px_16px] opacity-30" />
+            
+            <div className="h-48 bg-slate-950 border border-slate-800 rounded-2xl relative overflow-hidden">
+              {post.latitude && post.longitude ? (
+                <>
+                  <img
+                    src={`https://static-maps.yandex.ru/1.x/?ll=${post.longitude},${post.latitude}&z=13&l=map&size=650,300&lang=es_CL`}
+                    alt="Mapa de ubicación aproximada"
+                    className="absolute inset-0 w-full h-full object-cover opacity-80"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-slate-950/10 pointer-events-none" />
+                  
+                  {/* Radar de alta visibilidad en color celeste/cyan vibrante */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-sky-500/10 border-2 border-sky-400 rounded-full animate-pulse pointer-events-none shadow-[0_0_12px_rgba(56,189,248,0.25)]" />
+                </>
+              ) : (
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:16px_16px] opacity-30" />
+              )}
+            </div>
 
-              <div className="flex flex-col items-center gap-1.5 z-10 text-center px-4">
-                <MapPin className="w-6 h-6 text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.3)]" />
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+            {/* Bloque informativo inferior fuera del mapa para no obstruir calles ni descentrar el radar */}
+            <div className="flex flex-col items-center gap-1 text-center mt-1">
+              <div className="flex items-center gap-1 justify-center">
+                <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                <span className="text-[10px] font-semibold text-slate-200 uppercase tracking-wide">
                   {post.comuna}, Chile
                 </span>
-                <span className="text-[9px] text-slate-600">
-                  Por seguridad, no se muestra el domicilio exacto
-                </span>
               </div>
+              <span className="text-[9px] text-slate-500">
+                Por seguridad, no se muestra el domicilio exacto
+              </span>
             </div>
           </div>
         </div>

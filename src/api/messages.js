@@ -1,183 +1,115 @@
-import { chatSchema, messageSchema } from '@/schemas/message.schema';
-import { MOCK_USER_IDS, STORAGE_KEYS } from '@/config/constants';
+/**
+ * @fileoverview Servicio de API para la gestión de chats y mensajes de la plataforma.
+ * Conecta el frontend con los endpoints del backend para mensajería en tiempo real.
+ */
 
-const INITIAL_CHATS = [
-  {
-    id: '9f70bd54-f65d-4a86-a934-6f0dd37af851',
-    postId: '7bcb4b49-45f2-4d95-9005-7f0583b2f3a1',
-    postTitle: 'Bicicleta Trek Marlin 5 Aro 29',
-    postPrice: 420000,
-    postImage: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=200',
-    seller: MOCK_USER_IDS.RODRIGO,
-    sellerName: 'Rodrigo Araya',
-    buyer: MOCK_USER_IDS.DIEGO,
-    buyerName: 'Diego Valdivia',
-    lastMessage: 'Hola, ¿aún está disponible la bicicleta? Podemos coordinar mañana.',
-    updatedAt: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: '88c9f91e-d85b-45f0-8b1b-65ac61b671b5',
-    postId: '587cd88e-e6bd-4d83-aa91-6f1c88de96e5',
-    postTitle: 'Mesa de centro madera rústica',
-    postPrice: 85000,
-    postImage: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&q=80&w=200',
-    seller: MOCK_USER_IDS.PAULA,
-    sellerName: 'Paula Espinoza',
-    buyer: MOCK_USER_IDS.DIEGO,
-    buyerName: 'Diego Valdivia',
-    lastMessage: 'Perfecto, nos vemos en el centro comercial a las 15:00.',
-    updatedAt: new Date(Date.now() - 3600000 * 5).toISOString()
-  }
-];
+import apiClient from './apiClient';
+import { getPusherHeaders } from '@/lib/realtime';
 
-const INITIAL_MESSAGES = [
-  {
-    id: 'msg-p1',
-    chatId: '88c9f91e-d85b-45f0-8b1b-65ac61b671b5',
-    content: 'Hola Paula, me interesa mucho la mesa de roble. ¿Haces entregas a domicilio?',
-    sender: MOCK_USER_IDS.DIEGO,
-    createdAt: new Date(Date.now() - 3600000 * 5.2).toISOString()
-  },
-  {
-    id: 'msg-p2',
-    chatId: '88c9f91e-d85b-45f0-8b1b-65ac61b671b5',
-    content: 'Hola Diego. No tengo despacho a domicilio directo, pero podemos coordinar un punto de entrega intermedio o si prefieres puedes retirarla en mi taller en Coquimbo.',
-    sender: MOCK_USER_IDS.PAULA,
-    createdAt: new Date(Date.now() - 3600000 * 5.1).toISOString()
-  },
-  {
-    id: 'msg-p3',
-    chatId: '88c9f91e-d85b-45f0-8b1b-65ac61b671b5',
-    content: 'Perfecto, nos vemos en el centro comercial a las 15:00.',
-    sender: MOCK_USER_IDS.DIEGO,
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString()
-  },
-  {
-    id: 'msg-r1',
-    chatId: '9f70bd54-f65d-4a86-a934-6f0dd37af851',
-    content: 'Hola, ¿aún está disponible la bicicleta? Podemos coordinar mañana.',
-    sender: MOCK_USER_IDS.DIEGO,
-    createdAt: new Date(Date.now() - 3600000).toISOString()
-  }
-];
-
-if (!localStorage.getItem(STORAGE_KEYS.CHATS)) {
-  localStorage.setItem(STORAGE_KEYS.CHATS, JSON.stringify(INITIAL_CHATS));
-}
-if (!localStorage.getItem(STORAGE_KEYS.MESSAGES)) {
-  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(INITIAL_MESSAGES));
-}
-
-function createId() {
-  return crypto.randomUUID();
-}
-
-function getChatsFromStorage() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.CHATS) || '[]');
-}
-
-function saveChatsToStorage(chats) {
-  localStorage.setItem(STORAGE_KEYS.CHATS, JSON.stringify(chats));
-}
-
-function getMessagesFromStorage() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || '[]');
-}
-
-function saveMessagesToStorage(messages) {
-  localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(messages));
-}
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-export async function mockGetChats(userId) {
-  await delay(300);
-  const chats = getChatsFromStorage();
-  return chats.filter(chat => chat.seller === userId || chat.buyer === userId)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-}
-
-export async function mockGetMessages(chatId) {
-  await delay(200);
-  const messages = getMessagesFromStorage();
-  return messages.filter(msg => msg.chatId === chatId)
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-}
-
-export async function mockSendMessage(chatId, content, sender) {
-  messageSchema.parse({ chatId, content, sender, createdAt: new Date().toISOString() });
-
-  await delay(100);
-
-  const messages = getMessagesFromStorage();
-  const chats = getChatsFromStorage();
-
-  const newMessage = {
-    id: `msg-${Math.random().toString(36).substring(2, 9)}`,
-    chatId,
-    content,
-    sender,
-    createdAt: new Date().toISOString()
+/**
+ * Mapea y normaliza un objeto Chat proveniente del backend.
+ *
+ * @param {Object} chat - Objeto chat crudo del backend.
+ * @returns {Object|null} Objeto chat mapeado para el frontend.
+ */
+export const mapChatResponse = (chat) => {
+  if (!chat) return null;
+  return {
+    id: chat.id,
+    postId: chat.postId,
+    postTitle: chat.postTitle,
+    postPrice: Number(chat.postPrice),
+    postImage: chat.postImage?.url || null,
+    seller: chat.seller?.id,
+    sellerName: chat.seller?.name,
+    buyer: chat.buyer?.id,
+    buyerName: chat.buyer?.name,
+    lastMessage: chat.lastMessage,
+    lastMessageAt: chat.lastMessageAt,
+    isUnread: chat.isUnread,
+    createdAt: chat.createdAt,
+    updatedAt: chat.lastMessageAt || chat.updatedAt,
   };
+};
 
-  messages.push(newMessage);
-  saveMessagesToStorage(messages);
+/**
+ * Mapea y normaliza un objeto Mensaje proveniente del backend.
+ *
+ * @param {Object} msg - Objeto mensaje crudo del backend.
+ * @returns {Object|null} Objeto mensaje mapeado para el frontend.
+ */
+export const mapMessageResponse = (msg) => {
+  if (!msg) return null;
+  return {
+    id: msg.id,
+    chatId: msg.chatId,
+    content: msg.content,
+    sender: msg.senderId, // Mapea senderId del backend a sender del frontend
+    createdAt: msg.createdAt,
+  };
+};
 
-  const chatIndex = chats.findIndex(c => c.id === chatId);
-  if (chatIndex !== -1) {
-    chats[chatIndex].lastMessage = content;
-    chats[chatIndex].updatedAt = newMessage.createdAt;
-    saveChatsToStorage(chats);
-  }
-
-  return newMessage;
+/**
+ * Obtiene el listado de conversaciones/chats en las que participa el usuario actual.
+ *
+ * @returns {Promise<Array<Object>>} Listado de conversaciones normalizadas.
+ */
+export async function getChats() {
+  const response = await apiClient.get('/api/chats');
+  const chats = response.data.data || [];
+  return chats.map(mapChatResponse);
 }
 
-export async function mockCreateChat(post, currentUser) {
-  if (!currentUser) {
-    throw new Error('Debe iniciar sesión para iniciar una conversación');
-  }
-  if (post.seller === currentUser.id) {
-    throw new Error('No puedes chatear contigo mismo sobre tu publicación');
-  }
+/**
+ * Obtiene el listado de mensajes asociados a una conversación específica.
+ *
+ * @param {string} chatId - UUID de la conversación.
+ * @returns {Promise<Array<Object>>} Listado de mensajes ordenados cronológicamente.
+ */
+export async function getMessages(chatId) {
+  const response = await apiClient.get(`/api/chats/${chatId}/messages`);
+  const messages = response.data.data || [];
+  return messages.map(mapMessageResponse);
+}
 
-  await delay(500);
+/**
+ * Envía un nuevo mensaje dentro de una conversación.
+ *
+ * @param {string} chatId - UUID de la conversación.
+ * @param {string} content - Contenido del mensaje.
+ * @returns {Promise<Object>} Datos del mensaje enviado.
+ */
+export async function sendMessage(chatId, content) {
+  const response = await apiClient.post(
+    `/api/chats/${chatId}/messages`,
+    { content },
+    { headers: getPusherHeaders() }
+  );
+  return mapMessageResponse(response.data.data);
+}
 
-  const chats = getChatsFromStorage();
+/**
+ * Crea una nueva conversación para un artículo específico, o recupera la existente.
+ *
+ * @param {string} postId - UUID del artículo.
+ * @returns {Promise<Object>} Datos de la conversación creada o recuperada.
+ */
+export async function createChat(postId) {
+  const response = await apiClient.post(
+    `/api/posts/${postId}/chats`,
+    {},
+    { headers: getPusherHeaders() }
+  );
+  return mapChatResponse(response.data.data);
+}
 
-  const existingChat = chats.find(c => c.postId === post.id && c.buyer === currentUser.id);
-  if (existingChat) {
-    return existingChat;
-  }
-
-  const newChat = {
-    id: createId(),
-    postId: post.id,
-    postTitle: post.title,
-    postPrice: post.price,
-    postImage: post.images[0] || 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&q=80&w=200',
-    seller: post.seller,
-    sellerName: post.sellerName,
-    buyer: currentUser.id,
-    buyerName: currentUser.name,
-    lastMessage: 'Conversación iniciada',
-    updatedAt: new Date().toISOString()
-  };
-
-  chatSchema.parse(newChat);
-
-  chats.unshift(newChat);
-  saveChatsToStorage(chats);
-
-  const messages = getMessagesFromStorage();
-  messages.push({
-    id: `msg-sys-${Math.random().toString(36).substring(2, 9)}`,
-    chatId: newChat.id,
-    content: `Hola ${post.sellerName}, me interesa tu publicación "${post.title}". ¿Sigue disponible?`,
-    sender: currentUser.id,
-    createdAt: new Date().toISOString()
-  });
-  saveMessagesToStorage(messages);
-
-  return newChat;
+/**
+ * Marca una conversación específica como leída en el servidor.
+ *
+ * @param {string} chatId - UUID de la conversación.
+ * @returns {Promise<Object>} Resultado de la operación.
+ */
+export async function markChatAsRead(chatId) {
+  const response = await apiClient.patch(`/api/chats/${chatId}/read`);
+  return response.data;
 }

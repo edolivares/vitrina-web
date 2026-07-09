@@ -7,7 +7,7 @@
  */
 export function getPostMetrics(post, chats = []) {
   const metricSeed = post.id.split('').reduce((total, char) => total + char.charCodeAt(0), 0);
-  const views = metricSeed + 45;
+  const views = typeof post.viewsCount === 'number' ? post.viewsCount : metricSeed + 45;
   const favorites = (metricSeed % 35) + 3;
   const productChats = chats.filter(chat => chat.postId === post.id);
   const chatCount = productChats.length;

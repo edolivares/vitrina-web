@@ -161,6 +161,43 @@
   }
 
   [data-sileo-description] {
-    color: #334155 !important;
+    color: rgb(148 163 184);
+  }
+
+  .chat-toast-description {
+    color: rgb(203 213 225) !important;
+  }
+
+  .chat-toast-button {
+    color: rgb(238 242 255) !important;
+    background-color: rgb(79 70 229 / 0.28) !important;
+  }
+
+  .chat-toast-button:hover {
+    background-color: rgb(99 102 241 / 0.4) !important;
+  }
+
+  .chat-scrollbar {
+    scrollbar-color: rgb(129 140 248 / 0.8) rgb(15 23 42 / 0.95);
+    scrollbar-width: thin;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-track {
+    background: rgb(15 23 42 / 0.95);
+    border-left: 1px solid rgb(51 65 85 / 0.65);
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgb(129 140 248 / 0.95), rgb(79 70 229 / 0.9));
+    border: 3px solid rgb(15 23 42 / 0.95);
+    border-radius: 999px;
+  }
+
+  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgb(165 180 252), rgb(99 102 241));
   }
 }

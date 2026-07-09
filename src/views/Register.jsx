@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { sileo } from 'sileo';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useUser } from '@/context/UserContext';
 import { registerSchema } from '@/schemas/auth.schema';
 import { Button } from '@/components/ui/button';
@@ -10,47 +12,45 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 
 export function Register() {
-  const { register } = useUser();
+  const { user, register: registerUser } = useUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const {
+    register: registerInput,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+  });
 
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
+  const rawRedirectPath = searchParams.get('redirect') || '/';
+  const redirectPath = (rawRedirectPath === '/login' || rawRedirectPath === '/registro') ? '/' : rawRedirectPath;
 
-  const redirectPath = searchParams.get('redirect') || '/';
+  useEffect(() => {
+    if (user) {
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, navigate, redirectPath]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrors({});
-    setSubmitting(true);
-
+  const onSubmit = async (data) => {
     try {
-
-      registerSchema.parse({ name, email, password, passwordConfirm });
-
-      await register({ name, email, password, passwordConfirm });
+      await registerUser({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        passwordConfirm: data.passwordConfirm,
+      });
 
       navigate(redirectPath, { replace: true });
     } catch (err) {
-      if (err.name === 'ZodError') {
-        const fieldErrors = {};
-        err.errors.forEach((validationError) => {
-          fieldErrors[validationError.path[0]] = validationError.message;
-        });
-        setErrors(fieldErrors);
-      } else {
-        sileo.error({
-          title: 'No se pudo crear la cuenta',
-          description: err.message || 'Error en el servidor'
-        });
-      }
-    } finally {
-      setSubmitting(false);
+      const errorMsg = err.response?.data?.message || err.message || 'Error en el servidor';
+      sileo.error({
+        title: 'No se pudo crear la cuenta',
+        description: errorMsg,
+      });
     }
   };
 
@@ -75,7 +75,7 @@ export function Register() {
         </CardHeader>
 
         <CardContent className="p-0">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-400">
@@ -83,19 +83,18 @@ export function Register() {
               </label>
               <Input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                {...registerInput('name')}
                 placeholder="Juan Gómez"
-                disabled={submitting}
-                className={`w-full bg-slate-950 border rounded-xl h-11 px-3.5 text-sm text-slate-200 placeholder-slate-600 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
+                disabled={isSubmitting}
+                className={`w-full bg-white border rounded-xl h-11 px-3.5 text-sm text-slate-900 placeholder-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
                   errors.name
                     ? 'border-rose-500/50 focus-visible:border-rose-500'
-                    : 'border-slate-800 focus-visible:border-indigo-500'
+                    : 'border-slate-300 focus-visible:border-indigo-500'
                 }`}
               />
               {errors.name && (
                 <span className="text-[10px] text-rose-400 font-medium pl-1">
-                  {errors.name}
+                  {errors.name.message}
                 </span>
               )}
             </div>
@@ -106,19 +105,18 @@ export function Register() {
               </label>
               <Input
                 type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...registerInput('email')}
                 placeholder="juan@correo.com"
-                disabled={submitting}
-                className={`w-full bg-slate-950 border rounded-xl h-11 px-3.5 text-sm text-slate-200 placeholder-slate-600 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
+                disabled={isSubmitting}
+                className={`w-full bg-white border rounded-xl h-11 px-3.5 text-sm text-slate-900 placeholder-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
                   errors.email
                     ? 'border-rose-500/50 focus-visible:border-rose-500'
-                    : 'border-slate-800 focus-visible:border-indigo-500'
+                    : 'border-slate-300 focus-visible:border-indigo-500'
                 }`}
               />
               {errors.email && (
                 <span className="text-[10px] text-rose-400 font-medium pl-1">
-                  {errors.email}
+                  {errors.email.message}
                 </span>
               )}
             </div>
@@ -127,21 +125,30 @@ export function Register() {
               <label className="text-xs font-medium text-slate-400">
                 Contraseña
               </label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                disabled={submitting}
-                className={`w-full bg-slate-950 border rounded-xl h-11 px-3.5 text-sm text-slate-200 placeholder-slate-600 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
-                  errors.password
-                    ? 'border-rose-500/50 focus-visible:border-rose-500'
-                    : 'border-slate-800 focus-visible:border-indigo-500'
-                }`}
-              />
+              <div className="relative w-full flex items-center">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  {...registerInput('password')}
+                  placeholder="Mínimo 6 caracteres"
+                  disabled={isSubmitting}
+                  className={`w-full bg-white border rounded-xl h-11 pl-3.5 pr-10 text-sm text-slate-900 placeholder-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
+                    errors.password
+                      ? 'border-rose-500/50 focus-visible:border-rose-500'
+                      : 'border-slate-300 focus-visible:border-indigo-500'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  disabled={isSubmitting}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {errors.password && (
                 <span className="text-[10px] text-rose-400 font-medium pl-1">
-                  {errors.password}
+                  {errors.password.message}
                 </span>
               )}
             </div>
@@ -150,32 +157,41 @@ export function Register() {
               <label className="text-xs font-medium text-slate-400">
                 Confirmar Contraseña
               </label>
-              <Input
-                type="password"
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                placeholder="Repite la contraseña"
-                disabled={submitting}
-                className={`w-full bg-slate-950 border rounded-xl h-11 px-3.5 text-sm text-slate-200 placeholder-slate-600 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
-                  errors.passwordConfirm
-                    ? 'border-rose-500/50 focus-visible:border-rose-500'
-                    : 'border-slate-800 focus-visible:border-indigo-500'
-                }`}
-              />
+              <div className="relative w-full flex items-center">
+                <Input
+                  type={showPasswordConfirm ? 'text' : 'password'}
+                  {...registerInput('passwordConfirm')}
+                  placeholder="Repite la contraseña"
+                  disabled={isSubmitting}
+                  className={`w-full bg-white border rounded-xl h-11 pl-3.5 pr-10 text-sm text-slate-900 placeholder-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-indigo-500 transition-colors ${
+                    errors.passwordConfirm
+                      ? 'border-rose-500/50 focus-visible:border-rose-500'
+                      : 'border-slate-300 focus-visible:border-indigo-500'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                  className="absolute right-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  disabled={isSubmitting}
+                >
+                  {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {errors.passwordConfirm && (
                 <span className="text-[10px] text-rose-400 font-medium pl-1">
-                  {errors.passwordConfirm}
+                  {errors.passwordConfirm.message}
                 </span>
               )}
             </div>
 
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={isSubmitting}
               className="w-full py-6 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2 active:scale-[0.98] border-none"
               size="lg"
             >
-              {submitting ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Creando cuenta...
