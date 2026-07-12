@@ -105,6 +105,25 @@ export async function getMe() {
   return mapUserResponse(response.data.data);
 }
 
+export async function updateProfile(profileData) {
+  const payload = {};
+
+  if (profileData.name !== undefined) {
+    payload.name = profileData.name;
+  }
+
+  if (profileData.bio !== undefined) {
+    payload.bio = profileData.bio;
+  }
+
+  try {
+    const response = await apiClient.put('/api/auth/me', payload);
+    return mapUserResponse(response.data.data);
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, 'No se pudo actualizar el perfil.'), { cause: error });
+  }
+}
+
 export async function uploadAvatar(file) {
   const formData = new FormData();
   formData.append('file', file);

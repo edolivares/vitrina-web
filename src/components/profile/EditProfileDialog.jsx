@@ -1,17 +1,31 @@
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+
+const MAX_BIO_LINES = 5;
+const getLineCount = (value) => value.split(/\r\n|\r|\n/).length;
 
 export function EditProfileDialog({
   open,
   isSaving,
   name,
-  email,
+  bio,
   onOpenChange,
   onNameChange,
-  onEmailChange,
+  onBioChange,
   onSave
 }) {
+  const bioLineCount = getLineCount(bio);
+
+  const handleBioChange = (event) => {
+    const nextBio = event.target.value;
+
+    if (getLineCount(nextBio) <= MAX_BIO_LINES) {
+      onBioChange(nextBio);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md overflow-hidden bg-slate-900 border border-slate-800 text-slate-200 p-6 rounded-2xl shadow-xl">
@@ -25,7 +39,7 @@ export function EditProfileDialog({
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-100">Editar Perfil</DialogTitle>
           <DialogDescription className="text-sm text-slate-400 mt-1">
-            Actualiza los datos visibles de tu cuenta en esta maqueta local.
+            Actualiza los datos visibles de tu cuenta.
           </DialogDescription>
         </DialogHeader>
 
@@ -38,13 +52,19 @@ export function EditProfileDialog({
               className="rounded-xl border-slate-800 bg-slate-950 text-slate-200 focus-visible:border-indigo-500 focus-visible:ring-0"
             />
           </div>
+
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-slate-400">Correo electrónico</label>
-            <Input
-              value={email}
-              onChange={(event) => onEmailChange(event.target.value)}
-              className="rounded-xl border-slate-800 bg-slate-950 text-slate-200 focus-visible:border-indigo-500 focus-visible:ring-0"
+            <label className="text-xs font-medium text-slate-400">Bio</label>
+            <Textarea
+              value={bio}
+              onChange={handleBioChange}
+              maxLength={280}
+              rows={5}
+              className="min-h-28 resize-none rounded-xl border-slate-800 bg-slate-950 text-slate-200 focus-visible:border-indigo-500 focus-visible:ring-0"
             />
+            <span className="self-end text-[11px] text-slate-500">
+              {bio.length}/280 · {bioLineCount}/{MAX_BIO_LINES} líneas
+            </span>
           </div>
         </fieldset>
 

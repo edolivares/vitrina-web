@@ -24,6 +24,11 @@ export function ProfileHeader({ user, reviewScore = 0, reviewCount = 0, onEditAv
         <div className="flex-1 text-center md:text-left flex flex-col gap-1 min-w-0">
           <h2 className="text-2xl font-bold text-slate-100 font-sans tracking-tight">{user.name}</h2>
           <span className="text-sm font-medium text-slate-400">{user.email}</span>
+          {user.bio && (
+            <p className="max-w-2xl whitespace-pre-wrap break-words text-sm leading-6 text-slate-300">
+              {user.bio}
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
             <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950/40 border border-slate-800/80 rounded-full text-xs font-semibold text-slate-300">

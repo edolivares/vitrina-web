@@ -7,9 +7,12 @@
 
 import axios from 'axios';
 import { STORAGE_KEYS } from '@/config/constants';
+import { buildApiUrl, normalizeApiBaseUrl } from './url';
+
+const apiBaseUrl = normalizeApiBaseUrl(import.meta.env.VITE_API_URL || 'http://localhost:4000');
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -106,7 +109,7 @@ apiClient.interceptors.response.use(
         // Intentar refrescar la sesión llamando a la ruta de refresh del backend
         // Usamos una llamada directa de axios para evitar disparar este mismo interceptor
         const response = await axios.post(
-          `${apiClient.defaults.baseURL}/api/auth/refresh`,
+          buildApiUrl(apiClient.defaults.baseURL, '/api/auth/refresh'),
           {},
           { withCredentials: true }
         );

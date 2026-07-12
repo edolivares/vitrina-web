@@ -96,10 +96,10 @@ export function Profile() {
         open={profile.isEditProfileDialogOpen}
         isSaving={profile.isSavingProfile}
         name={profile.profileName}
-        email={profile.profileEmail}
+        bio={profile.profileBio}
         onOpenChange={(open) => !profile.isSavingProfile && profile.setIsEditProfileDialogOpen(open)}
         onNameChange={profile.setProfileName}
-        onEmailChange={profile.setProfileEmail}
+        onBioChange={profile.setProfileBio}
         onSave={profile.handleSaveProfile}
       />
 

@@ -3,7 +3,7 @@ import { useUser } from '@/context/UserContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { getPostsBySeller, updatePostStatus, getPostById, getDraftsBySeller, deletePost as apiDeletePost, getPublicProfile } from '@/api/posts';
 import { getChats } from '@/api/messages';
-import { uploadAvatar } from '@/api/auth';
+import { updateProfile, uploadAvatar } from '@/api/auth';
 import { sileo } from 'sileo';
 
 const EMPTY_REVIEW_DATA = {
@@ -107,7 +107,7 @@ export function useProfile() {
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileName, setProfileName] = useState(() => user?.name || '');
-  const [profileEmail, setProfileEmail] = useState(() => user?.email || '');
+  const [profileBio, setProfileBio] = useState(() => user?.bio || '');
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [isAvatarDragActive, setIsAvatarDragActive] = useState(false);
@@ -310,22 +310,33 @@ export function useProfile() {
   const handleOpenEditProfile = () => {
     if (user) {
       setProfileName(user.name);
-      setProfileEmail(user.email);
+      setProfileBio(user.bio || '');
     }
     setIsEditProfileDialogOpen(true);
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     setIsSavingProfile(true);
-    updateUser({ name: profileName, email: profileEmail });
-    sileo.success({
-      title: 'Perfil actualizado',
-      description: 'Los datos se guardaron en la maqueta local.',
-    });
-    setTimeout(() => {
-      setIsSavingProfile(false);
+    try {
+      const updatedUser = await updateProfile({
+        name: profileName,
+        bio: profileBio.trim() || null,
+      });
+
+      updateUser(updatedUser);
       setIsEditProfileDialogOpen(false);
-    }, 900);
+      sileo.success({
+        title: 'Perfil actualizado',
+        description: 'Los datos se guardaron correctamente.',
+      });
+    } catch (error) {
+      sileo.error({
+        title: 'No se pudo actualizar el perfil',
+        description: error.message || 'Intenta nuevamente.',
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   return {
@@ -345,8 +356,8 @@ export function useProfile() {
     isSavingProfile,
     profileName,
     setProfileName,
-    profileEmail,
-    setProfileEmail,
+    profileBio,
+    setProfileBio,
     isReviewsOpen,
     setIsReviewsOpen,
     reviewData,
