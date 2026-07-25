@@ -25,13 +25,25 @@ export function Home() {
     setLoading(true);
     setError(null);
     try {
+      const originCityId =
+        searchParams.get('originCityId') ||
+        searchParams.get('cityId') ||
+        '';
+      const lat = searchParams.get('lat') || '';
+      const lng = searchParams.get('lng') || '';
+      const hasDistanceOrigin = Boolean(originCityId || (lat && lng));
       const filters = {
         search: searchParams.get('search') || '',
         regionId: searchParams.get('regionId') || '',
+        cityId: searchParams.get('cityId') || '',
+        originCityId,
         comuna: searchParams.get('comuna') || '',
         minPrice: searchParams.get('minPrice') || '',
         maxPrice: searchParams.get('maxPrice') || '',
         condition: searchParams.get('condition') || '',
+        radius: hasDistanceOrigin ? searchParams.get('radius') || '200' : '',
+        lat,
+        lng,
         sort: searchParams.get('sort') || 'newest',
       };
 
@@ -87,8 +99,10 @@ export function Home() {
             Sugerencias de hoy
           </h1>
           <p className="text-xs text-slate-400">
-            {searchParams.get('comuna')
-                ? `Mostrando publicaciones en ${searchParams.get('comuna')}`
+            {searchParams.get('locationMode') === 'gps'
+                ? 'Mostrando publicaciones cerca de tu ubicación'
+                : searchParams.get('originCityId')
+                  ? `Mostrando publicaciones cerca de ${searchParams.get('comuna')}`
                 : searchParams.get('regionId')
                   ? 'Mostrando publicaciones en la región seleccionada'
                   : 'Mostrando publicaciones en todas las ubicaciones'}

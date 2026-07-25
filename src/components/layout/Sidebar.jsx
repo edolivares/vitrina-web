@@ -1,16 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Filter, MapPin, Plus, Search } from 'lucide-react';
+import { Filter, LoaderCircle, LocateFixed, MapPin, Plus, Search } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Slider } from '@/components/ui/slider';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useLocations } from '@/hooks/useLocations';
+
+const DEFAULT_RADIUS = 200;
+
+function getRadius(searchParams) {
+  const value = Number(searchParams.get('radius'));
+  return Number.isFinite(value) && value >= 10 && value <= 500
+    ? value
+    : DEFAULT_RADIUS;
+}
+
+function formatCoordinate(value) {
+  return Number(value.toFixed(4)).toString();
+}
 
 function FilterControls() {
   const { user } = useUser();
@@ -19,14 +32,21 @@ function FilterControls() {
 
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [regionId, setRegionId] = useState(searchParams.get('regionId') || '');
-  const [comuna, setComuna] = useState(searchParams.get('comuna') || '');
+  const [cityId, setCityId] = useState(searchParams.get('cityId') || '');
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
   const [condition, setCondition] = useState(searchParams.get('condition') || '');
-  const [radius, setRadius] = useState(Number(searchParams.get('radius')) || 200);
+  const [radius, setRadius] = useState(getRadius(searchParams));
   const [sort, setSort] = useState(searchParams.get('sort') || 'newest');
+  const [requestingLocation, setRequestingLocation] = useState(false);
+  const [locationError, setLocationError] = useState('');
 
   const { regions, cities, loadingRegions, loadingCities } = useLocations(regionId);
+  const selectedCity = cities.find((city) => city.id.toString() === cityId);
+  const isGpsLocation =
+    searchParams.get('locationMode') === 'gps' &&
+    Boolean(searchParams.get('lat') && searchParams.get('lng'));
+  const hasDistanceOrigin = isGpsLocation || Boolean(cityId);
 
   // Cargar filtros guardados en localStorage al montar si los parámetros en URL están vacíos
   useEffect(() => {
@@ -49,30 +69,33 @@ function FilterControls() {
         console.error('Error cargando filtros de localStorage:', err);
       }
     }
-  }, []);
+  }, [searchParams, setSearchParams]);
 
   // Sincronizar estados locales cuando cambia la URL
   useEffect(() => {
     setSearch(searchParams.get('search') || '');
     setRegionId(searchParams.get('regionId') || '');
-    setComuna(searchParams.get('comuna') || '');
+    setCityId(searchParams.get('cityId') || '');
     setMinPrice(searchParams.get('minPrice') || '');
     setMaxPrice(searchParams.get('maxPrice') || '');
     setCondition(searchParams.get('condition') || '');
-    setRadius(Number(searchParams.get('radius')) || 200);
+    setRadius(getRadius(searchParams));
     setSort(searchParams.get('sort') || 'newest');
   }, [searchParams]);
 
   // Guardar filtros activos en localStorage al actualizar searchParams
   useEffect(() => {
+    const savedCityId = searchParams.get('cityId') || '';
     const activeFilters = {
       search: searchParams.get('search') || '',
       regionId: searchParams.get('regionId') || '',
+      cityId: savedCityId,
+      originCityId: savedCityId ? searchParams.get('originCityId') || '' : '',
       comuna: searchParams.get('comuna') || '',
       minPrice: searchParams.get('minPrice') || '',
       maxPrice: searchParams.get('maxPrice') || '',
       condition: searchParams.get('condition') || '',
-      radius: searchParams.get('radius') || '',
+      radius: savedCityId ? searchParams.get('radius') || '' : '',
       sort: searchParams.get('sort') || 'newest'
     };
     localStorage.setItem('vitrina_filters', JSON.stringify(activeFilters));
@@ -99,6 +122,71 @@ function FilterControls() {
 
   const handleCreatePostClick = () => {
     navigate(user ? '/publicar' : '/login?redirect=/publicar');
+  };
+
+  const clearGpsLocation = () => {
+    setLocationError('');
+    applyFilters({
+      locationMode: '',
+      lat: '',
+      lng: '',
+      radius: '',
+    });
+  };
+
+  const handleCurrentLocation = () => {
+    if (isGpsLocation) {
+      clearGpsLocation();
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationError('Tu navegador no permite obtener la ubicación.');
+      return;
+    }
+
+    setRequestingLocation(true);
+    setLocationError('');
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const latitude = Number(coords.latitude);
+        const longitude = Number(coords.longitude);
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          setLocationError('No pudimos obtener coordenadas válidas.');
+          setRequestingLocation(false);
+          return;
+        }
+
+        setRegionId('');
+        setCityId('');
+        applyFilters({
+          locationMode: 'gps',
+          lat: formatCoordinate(latitude),
+          lng: formatCoordinate(longitude),
+          regionId: '',
+          cityId: '',
+          originCityId: '',
+          comuna: '',
+          radius,
+        });
+        setRequestingLocation(false);
+      },
+      (error) => {
+        const message =
+          error?.code === 1
+            ? 'Necesitamos tu permiso para buscar publicaciones cerca de ti.'
+            : 'No pudimos obtener tu ubicación. Intenta nuevamente.';
+        setLocationError(message);
+        setRequestingLocation(false);
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000,
+      }
+    );
   };
 
   return (
@@ -138,9 +226,11 @@ function FilterControls() {
             <SelectValue placeholder="Ordenar por" />
           </SelectTrigger>
           <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
-            <SelectItem value="newest">Más recientes</SelectItem>
-            <SelectItem value="price_asc">Precio: Menor a Mayor</SelectItem>
-            <SelectItem value="price_desc">Precio: Mayor a Menor</SelectItem>
+            <SelectGroup>
+              <SelectItem value="newest">Más recientes</SelectItem>
+              <SelectItem value="price_asc">Precio: Menor a Mayor</SelectItem>
+              <SelectItem value="price_desc">Precio: Mayor a Menor</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
       </div>
@@ -153,8 +243,18 @@ function FilterControls() {
             onValueChange={(value) => {
               const selectedRegionId = value === 'all' ? '' : value;
               setRegionId(selectedRegionId);
-              setComuna('');
-              applyFilters({ regionId: selectedRegionId, comuna: '' });
+              setCityId('');
+              setLocationError('');
+              applyFilters({
+                regionId: selectedRegionId,
+                cityId: '',
+                originCityId: '',
+                comuna: '',
+                locationMode: '',
+                lat: '',
+                lng: '',
+                radius: '',
+              });
             }}
             disabled={loadingRegions}
           >
@@ -165,10 +265,12 @@ function FilterControls() {
               </div>
             </SelectTrigger>
             <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
-              <SelectItem value="all">Todo Chile</SelectItem>
-              {regions.map((item) => (
-                <SelectItem key={item.id} value={item.id.toString()}>{item.shortName || item.name}</SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectItem value="all">Todo Chile</SelectItem>
+                {regions.map((item) => (
+                  <SelectItem key={item.id} value={item.id.toString()}>{item.shortName || item.name}</SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>
@@ -177,11 +279,20 @@ function FilterControls() {
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-slate-400">Comuna</label>
             <Select
-              value={comuna || 'all'}
+              value={cityId || 'all'}
               onValueChange={(value) => {
-                const selectedComuna = value === 'all' ? '' : value;
-                setComuna(selectedComuna);
-                applyFilters({ comuna: selectedComuna });
+                const selectedCityId = value === 'all' ? '' : value;
+                const city = cities.find(
+                  (item) => item.id.toString() === selectedCityId
+                );
+                setCityId(selectedCityId);
+                setLocationError('');
+                applyFilters({
+                  cityId: selectedCityId,
+                  originCityId: selectedCityId,
+                  comuna: city?.name || '',
+                  radius: selectedCityId ? radius : '',
+                });
               }}
               disabled={loadingCities}
             >
@@ -192,30 +303,72 @@ function FilterControls() {
                 </div>
               </SelectTrigger>
               <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
-                <SelectItem value="all">Todas las comunas</SelectItem>
-                {cities.map((item) => (
-                  <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectItem value="all">Todas las comunas</SelectItem>
+                  {cities.map((item) => (
+                    <SelectItem key={item.id} value={item.id.toString()}>{item.name}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
         )}
 
-        <div className="mt-2 flex flex-col gap-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500">Radio de búsqueda</span>
-            <span className="font-medium text-indigo-400">{radius} km</span>
+        <Button
+          type="button"
+          variant={isGpsLocation ? 'secondary' : 'outline'}
+          onClick={handleCurrentLocation}
+          disabled={requestingLocation}
+          aria-pressed={isGpsLocation}
+          className="w-full justify-center"
+        >
+          {requestingLocation ? (
+            <LoaderCircle data-icon="inline-start" className="animate-spin" />
+          ) : (
+            <LocateFixed data-icon="inline-start" />
+          )}
+          {requestingLocation
+            ? 'Obteniendo ubicación...'
+            : isGpsLocation
+              ? 'Desactivar mi ubicación'
+              : 'Usar mi ubicación'}
+        </Button>
+
+        {locationError && (
+          <p role="alert" className="text-xs text-destructive">
+            {locationError}
+          </p>
+        )}
+
+        {!hasDistanceOrigin && (
+          <p className="text-xs text-muted-foreground">
+            Selecciona una comuna o usa tu ubicación para buscar por distancia.
+          </p>
+        )}
+
+        {hasDistanceOrigin && (
+          <div className="mt-2 flex flex-col gap-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500">Radio de búsqueda</span>
+              <span className="font-medium text-indigo-400">{radius} km</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {isGpsLocation
+                ? 'Desde tu ubicación actual'
+                : `Desde ${selectedCity?.name || searchParams.get('comuna')}`}
+            </span>
+            <Slider
+              min={10}
+              max={500}
+              step={10}
+              value={[radius]}
+              onValueChange={(value) => setRadius(value[0])}
+              onValueCommit={(value) => applyFilters({ radius: value[0] })}
+              aria-label="Radio de búsqueda en kilómetros"
+              className="w-full cursor-pointer py-2 [&_[data-slot=slider-range]]:bg-indigo-400 [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:border-indigo-200 [&_[data-slot=slider-thumb]]:bg-indigo-500 [&_[data-slot=slider-thumb]]:shadow-[0_0_0_4px_rgba(129,140,248,0.18)] [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-slate-700"
+            />
           </div>
-          <Slider
-            min={10}
-            max={500}
-            step={10}
-            value={[radius]}
-            onValueChange={(value) => setRadius(value[0])}
-            onValueCommit={(value) => applyFilters({ radius: value[0] })}
-            className="w-full cursor-pointer py-2 [&_[data-slot=slider-range]]:bg-indigo-400 [&_[data-slot=slider-thumb]]:size-4 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:border-indigo-200 [&_[data-slot=slider-thumb]]:bg-indigo-500 [&_[data-slot=slider-thumb]]:shadow-[0_0_0_4px_rgba(129,140,248,0.18)] [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:bg-slate-700"
-          />
-        </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

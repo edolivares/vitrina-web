@@ -27,8 +27,12 @@ export const postSchema = z.object({
 export const filterSchema = z.object({
   search: z.string().optional(),
   regionId: z.string().optional(),
+  cityId: z.string().optional(),
+  originCityId: z.string().optional(),
   comuna: z.string().optional(),
-  radius: z.number().min(0).max(500).default(200).optional(),
+  radius: z.number().min(10).max(500).default(200).optional(),
+  lat: z.union([z.string(), z.number()]).optional(),
+  lng: z.union([z.string(), z.number()]).optional(),
   minPrice: z.union([z.string(), z.number()]).optional(),
   maxPrice: z.union([z.string(), z.number()]).optional(),
   condition: z.string().optional(),

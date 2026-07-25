@@ -89,6 +89,8 @@ export async function syncPostImages(postId, images = []) {
  * @param {Object} [filters={}] - Filtros de búsqueda.
  * @param {string} [filters.search] - Texto de búsqueda.
  * @param {string} [filters.regionId] - ID de la región.
+ * @param {string} [filters.cityId] - ID de la comuna seleccionada.
+ * @param {string} [filters.originCityId] - ID de la comuna usada como centro del radio.
  * @param {string} [filters.comuna] - Nombre o ID de la comuna.
  * @param {string|number} [filters.minPrice] - Precio mínimo.
  * @param {string|number} [filters.maxPrice] - Precio máximo.
@@ -99,10 +101,15 @@ export async function getPosts(filters = {}) {
   const params = new URLSearchParams();
   if (filters.search) params.append('search', filters.search);
   if (filters.regionId) params.append('regionId', filters.regionId);
+  if (filters.cityId) params.append('cityId', filters.cityId);
+  if (filters.originCityId) params.append('originCityId', filters.originCityId);
   if (filters.comuna) params.append('comuna', filters.comuna);
   if (filters.minPrice) params.append('minPrice', filters.minPrice);
   if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
   if (filters.condition) params.append('condition', filters.condition);
+  if (filters.radius) params.append('radius', filters.radius);
+  if (filters.lat) params.append('lat', filters.lat);
+  if (filters.lng) params.append('lng', filters.lng);
 
   const response = await apiClient.get(`/api/posts?${params.toString()}`);
   const posts = response.data.data;
