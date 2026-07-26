@@ -11,7 +11,8 @@ export function ProductCard({ post, isFavorite = false, canFavorite = false, onT
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 transition-all duration-300 hover:-translate-y-1 hover:border-slate-700/80">
       <Link to={`/publicacion/${post.id}`} className="relative block aspect-square w-full overflow-hidden bg-slate-950">
         <LazyLoadImage
-          src={post.images[0]}
+          src={post.coverImage?.url || post.images[0]}
+          placeholderSrc={post.coverImage?.placeholder || undefined}
           alt={post.title}
           effect="blur"
           className="size-full object-cover transition-transform duration-500 group-hover:scale-105"

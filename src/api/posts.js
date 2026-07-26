@@ -2,18 +2,28 @@ import apiClient from './apiClient';
 
 function normalizeImageItem(image, index = 0) {
   if (typeof image === 'string') {
-    return { id: null, url: image, sortOrder: index };
+    return { id: null, url: image, placeholder: null, sortOrder: index };
   }
 
   return {
     id: image.id || image.mediaId || null,
     url: image.url,
+    placeholder: image.placeholder || null,
     sortOrder: Number.isInteger(image.sortOrder) ? image.sortOrder : index,
   };
 }
 
 function normalizeImages(images = []) {
   return images.map(normalizeImageItem).filter((image) => image.url);
+}
+
+function normalizeCoverImage(coverImage) {
+  if (!coverImage?.url) return null;
+
+  return {
+    url: coverImage.url,
+    placeholder: coverImage.placeholder || null,
+  };
 }
 
 function getApiErrorMessage(error, fallbackMessage) {
@@ -114,16 +124,21 @@ export async function getPosts(filters = {}) {
   const response = await apiClient.get(`/api/posts?${params.toString()}`);
   const posts = response.data.data;
   
-  return posts.map((post) => ({
-    id: post.id,
-    title: post.title,
-    price: Number(post.price),
-    condition: post.condition === 'NEW' ? 'Nuevo' : 'Usado',
-    comuna: post.cityName,
-    images: post.coverImage?.url ? [post.coverImage.url] : [],
-    seller: post.userId,
-    createdAt: post.createdAt,
-  }));
+  return posts.map((post) => {
+    const coverImage = normalizeCoverImage(post.coverImage);
+
+    return {
+      id: post.id,
+      title: post.title,
+      price: Number(post.price),
+      condition: post.condition === 'NEW' ? 'Nuevo' : 'Usado',
+      comuna: post.cityName,
+      coverImage,
+      images: coverImage ? [coverImage.url] : [],
+      seller: post.userId,
+      createdAt: post.createdAt,
+    };
+  });
 }
 
 /**
@@ -266,18 +281,23 @@ export async function getPostsBySeller(sellerId) {
   
   const activeAndArchived = posts.filter((post) => post.status !== 'DRAFT');
 
-  return activeAndArchived.map((post) => ({
-    id: post.id,
-    title: post.title,
-    price: Number(post.price),
-    status: post.status,
-    condition: post.condition === 'NEW' ? 'Nuevo' : 'Usado',
-    comuna: post.cityName,
-    images: post.coverImage?.url ? [post.coverImage.url] : [],
-    seller: sellerId,
-    createdAt: post.createdAt,
-    viewsCount: post.viewsCount || 0,
-  }));
+  return activeAndArchived.map((post) => {
+    const coverImage = normalizeCoverImage(post.coverImage);
+
+    return {
+      id: post.id,
+      title: post.title,
+      price: Number(post.price),
+      status: post.status,
+      condition: post.condition === 'NEW' ? 'Nuevo' : 'Usado',
+      comuna: post.cityName,
+      coverImage,
+      images: coverImage ? [coverImage.url] : [],
+      seller: sellerId,
+      createdAt: post.createdAt,
+      viewsCount: post.viewsCount || 0,
+    };
+  });
 }
 
 /**
@@ -291,16 +311,21 @@ export async function getDraftsBySeller() {
   
   const drafts = posts.filter((post) => post.status === 'DRAFT');
 
-  return drafts.map((post) => ({
-    id: post.id,
-    title: post.title === 'Sin Título' ? '' : post.title,
-    price: Number(post.price),
-    status: post.status,
-    condition: post.condition === 'NEW' ? 'Nuevo' : 'Usado',
-    comuna: post.cityName,
-    images: post.coverImage?.url ? [post.coverImage.url] : [],
-    createdAt: post.createdAt,
-  }));
+  return drafts.map((post) => {
+    const coverImage = normalizeCoverImage(post.coverImage);
+
+    return {
+      id: post.id,
+      title: post.title === 'Sin Título' ? '' : post.title,
+      price: Number(post.price),
+      status: post.status,
+      condition: post.condition === 'NEW' ? 'Nuevo' : 'Usado',
+      comuna: post.cityName,
+      coverImage,
+      images: coverImage ? [coverImage.url] : [],
+      createdAt: post.createdAt,
+    };
+  });
 }
 
 /**
@@ -324,16 +349,21 @@ export async function getPublicProfile(profileId) {
       reviewSummary: profile.reviewSummary || [],
       reviews: profile.reviews || []
     },
-    posts: posts.map((post) => ({
-      id: post.id,
-      title: post.title,
-      price: Number(post.price),
-      condition: post.condition === 'NEW' ? 'Nuevo' : 'Usado',
-      comuna: post.cityName,
-      images: post.coverImage?.url ? [post.coverImage.url] : [],
-      seller: profile.id,
-      createdAt: post.createdAt,
-    })),
+    posts: posts.map((post) => {
+      const coverImage = normalizeCoverImage(post.coverImage);
+
+      return {
+        id: post.id,
+        title: post.title,
+        price: Number(post.price),
+        condition: post.condition === 'NEW' ? 'Nuevo' : 'Usado',
+        comuna: post.cityName,
+        coverImage,
+        images: coverImage ? [coverImage.url] : [],
+        seller: profile.id,
+        createdAt: post.createdAt,
+      };
+    }),
   };
 }
 
